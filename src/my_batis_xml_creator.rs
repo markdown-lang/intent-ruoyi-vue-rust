@@ -1,11 +1,11 @@
+use crate::db_table_info::{
+  BusinessOperator, DBChange, DbColumn, DbCompare, DbDataType, DbTable, DbTableStructure,
+  GroupLocation, QueryCondition, to_entity_field_name,
+};
 use crate::quick_xml_util::{
   write_new_line_ident, write_new_line_then_n_ident, write_one_new_line, write_two_new_lines,
 };
 use crate::sql_updater::{drop_columns_for_select_sql, insert_columns_for_select_sql};
-use crate::db_table_info::{
-  BusinessOperator, DBChange, DbColumn, DbCompare, DbDataType, DbTable, GroupLocation,
-  QueryCondition, DbTableStructure, to_entity_field_name
-};
 use anyhow::Result;
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::{Reader, Writer};
@@ -565,9 +565,7 @@ pub fn generate(
         }
         //endregion
       }
-      BusinessOperator::None => {
-
-      }
+      BusinessOperator::None => {}
     }
   }
 
