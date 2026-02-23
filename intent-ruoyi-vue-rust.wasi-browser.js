@@ -56,4 +56,6 @@ const {
   },
 })
 export default __napiModule.exports
+export const createMyBatisXml = __napiModule.exports.createMyBatisXml
 export const plus100 = __napiModule.exports.plus100
+export const sum = __napiModule.exports.sum

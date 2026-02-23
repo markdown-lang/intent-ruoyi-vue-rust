@@ -1,11 +1,11 @@
 {
   "name": "@intent-codes/intent-ruoyi-vue-rust",
-  "version": "1.0.0",
-  "description": "Template project for writing node package with napi-rs",
+  "version": "0.0.1",
+  "description": "使用 rust 生成代码",
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/napi-rs/package-template.git"
+    "url": "git+ssh://git@github.com/markdown-lang/intent-ruoyi-vue-rust.git"
   },
   "license": "MIT",
   "browser": "browser.js",

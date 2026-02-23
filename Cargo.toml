@@ -1,16 +1,26 @@
 
 [package]
-authors = ["LongYinan <lynweklm@gmail.com>"]
-edition = "2021"
+authors = ["xiaohulu <76711619@qq.com>"]
+edition = "2024"
 name = "intent_ruoyi_vue_rust"
-version = "0.1.0"
+version = "0.0.1"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-napi = "3.0.0"
-napi-derive = "3.0.0"
+napi = "3.8.3"
+napi-derive = "3.5.2"
+serde_json = "1"
+quick-xml = "0.39.2"
+heck = "0.5.0"
+anyhow = "1"
+sqlformat = "0.5.0"
+sqlparser = "0.60.0"
+
+[dependencies.serde]
+version = "1"
+features = ["derive"]
 
 [build-dependencies]
 napi-build = "2"
