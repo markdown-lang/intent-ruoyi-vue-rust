@@ -10,7 +10,10 @@ pub mod sql_updater;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
-use crate::{db_table_info::{BusinessOperator, GroupLocation}, json_loader::load_table_structure};
+use crate::{
+  db_table_info::{BusinessOperator, GroupLocation},
+  json_loader::load_table_structure,
+};
 
 #[napi]
 pub fn plus_100(input: u32) -> u32 {
@@ -46,15 +49,15 @@ pub fn create_my_batis_xml(params: CreateMyBatisXmlParams) -> Result<String> {
     .split(',')
     .map(|s| s.trim())
     .filter(|s| !s.is_empty())
-    .map(|s| {
-      match s {
-        "QueryOne" => BusinessOperator::QueryOne,
-        "QueryList" => BusinessOperator::QueryList { conditions: Vec::new() },
-        "CreateOne" => BusinessOperator::CreateOne,
-        "UpdateOne" => BusinessOperator::UpdateOne,
-        "DeleteOne" => BusinessOperator::DeleteOne,
-        _ => BusinessOperator::None
-      }
+    .map(|s| match s {
+      "QueryOne" => BusinessOperator::QueryOne,
+      "QueryList" => BusinessOperator::QueryList {
+        conditions: Vec::new(),
+      },
+      "CreateOne" => BusinessOperator::CreateOne,
+      "UpdateOne" => BusinessOperator::UpdateOne,
+      "DeleteOne" => BusinessOperator::DeleteOne,
+      _ => BusinessOperator::None,
     })
     .collect();
 
