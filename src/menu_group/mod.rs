@@ -1,10 +1,7 @@
-use crate::git2_client::commit_files;
 use crate::source_file::liquibase::changelog_main::append_include_tag_to_changelog_file;
 use crate::source_file::liquibase::menu_group_creator::generate_menu_group_liquibase;
-use chrono::Local;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use std::fmt::format;
 use std::fs;
 use std::path::Path;
 
@@ -39,8 +36,6 @@ pub struct FileInfo {
 
 #[napi(object)]
 pub struct CodeGenerateResult {
-  pub commit_hash: String,
-  pub commit_time: String,
   pub files: Vec<FileInfo>,
 }
 
@@ -111,20 +106,5 @@ pub fn add_menu_group(
     message: "修改成功".to_string(),
   });
 
-  let committed_files = vec![
-    &file_path_config.liquibase_root_file_full_path,
-    &file_path_config.liquibase_menu_group_insert_file_path,
-  ];
-  let commit_info = commit_files(
-    &file_path_config.project_root_dir,
-    &format!("feat: 新增菜单分组 {}", &new_group.title),
-    committed_files,
-  )
-  .map_err(into_napi)?;
-
-  Ok(CodeGenerateResult {
-    commit_hash: commit_info,
-    commit_time: Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-    files,
-  })
+  Ok(CodeGenerateResult { files })
 }

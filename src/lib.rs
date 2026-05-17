@@ -1,7 +1,6 @@
 #![deny(clippy::all)]
 
 pub mod db_table_info;
-mod git2_client;
 pub mod json_loader;
 mod menu_group;
 pub mod quick_xml_util;

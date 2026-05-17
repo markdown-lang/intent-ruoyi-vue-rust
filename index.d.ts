@@ -4,8 +4,6 @@
 export declare function addMenuGroup(newGroup: MenuGroup, modifyInfo: ModifyInfo, filePathConfig: FilePathConfig): CodeGenerateResult
 
 export interface CodeGenerateResult {
-  commitHash: string
-  commitTime: string
   files: Array<FileInfo>
 }
 
