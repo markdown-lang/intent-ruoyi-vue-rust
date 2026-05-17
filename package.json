@@ -93,7 +93,9 @@
     ]
   },
   "ava": {
-    "extensions": ["ts"],
+    "extensions": [
+      "ts"
+    ],
     "timeout": "2m",
     "workerThreads": false,
     "environmentVariables": {
