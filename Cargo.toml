@@ -15,7 +15,7 @@ serde_json = "1"
 quick-xml = "0.40.1"
 heck = "0.5.0"
 anyhow = "1"
-git2 = "0.20.0"
+git2 = { version = "0.20.0", features = ["vendored-openssl"] }
 url = "2.5.0"
 log = "0.4"
 uuid = { version = "1.23.1", features = ["v4"] }
