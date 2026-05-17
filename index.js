@@ -576,6 +576,8 @@ if (!nativeBinding) {
 }
 
 module.exports = nativeBinding
+module.exports.addMenuGroup = nativeBinding.addMenuGroup
 module.exports.createMyBatisXml = nativeBinding.createMyBatisXml
+module.exports.FileOperation = nativeBinding.FileOperation
 module.exports.plus100 = nativeBinding.plus100
 module.exports.sum = nativeBinding.sum

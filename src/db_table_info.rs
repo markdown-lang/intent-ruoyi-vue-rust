@@ -1,5 +1,5 @@
 use heck::{ToLowerCamelCase, ToUpperCamelCase};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 /// 数据库表基本信息
 #[derive(Clone, Deserialize)]
@@ -270,19 +270,19 @@ impl DbColumn {
     let db_type_name = self.data_type.as_liquibase_type();
     result.push_str(db_type_name);
 
-    if let Some(max_length) = self.max_length {
-      if max_length > 0 {
-        result.push('(');
-        result.push_str(max_length.to_string().as_str());
+    if let Some(max_length) = self.max_length
+      && max_length > 0
+    {
+      result.push('(');
+      result.push_str(max_length.to_string().as_str());
 
-        if let Some(scale) = self.scale {
-          if scale > 0 {
-            result.push(',');
-            result.push_str(scale.to_string().as_str());
-          }
-        }
-        result.push(')');
+      if let Some(scale) = self.scale
+        && scale > 0
+      {
+        result.push(',');
+        result.push_str(scale.to_string().as_str());
       }
+      result.push(')');
     }
 
     result

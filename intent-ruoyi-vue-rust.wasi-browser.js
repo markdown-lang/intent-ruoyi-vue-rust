@@ -36,6 +36,7 @@ const {
       type: 'module',
     })
 
+
     return worker
   },
   overwriteImports(importObject) {
@@ -56,6 +57,8 @@ const {
   },
 })
 export default __napiModule.exports
+export const addMenuGroup = __napiModule.exports.addMenuGroup
 export const createMyBatisXml = __napiModule.exports.createMyBatisXml
+export const FileOperation = __napiModule.exports.FileOperation
 export const plus100 = __napiModule.exports.plus100
 export const sum = __napiModule.exports.sum
