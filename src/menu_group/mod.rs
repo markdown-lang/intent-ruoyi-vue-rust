@@ -1,12 +1,12 @@
-use std::fmt::format;
-use std::fs;
-use std::path::Path;
-use chrono::Local;
-use napi::bindgen_prelude::*;
-use napi_derive::napi;
 use crate::git2_client::commit_files;
 use crate::source_file::liquibase::changelog_main::append_include_tag_to_changelog_file;
 use crate::source_file::liquibase::menu_group_creator::generate_menu_group_liquibase;
+use chrono::Local;
+use napi::bindgen_prelude::*;
+use napi_derive::napi;
+use std::fmt::format;
+use std::fs;
+use std::path::Path;
 
 #[napi(object)]
 pub struct MenuGroup {
@@ -68,7 +68,7 @@ pub fn add_menu_group(
   new_group: MenuGroup,
   modify_info: ModifyInfo,
   file_path_config: FilePathConfig,
-) -> Result<CodeGenerateResult>  {
+) -> Result<CodeGenerateResult> {
   // 1 新增创建菜单分组的 liquibase 脚本
   //    * 生成liquibase脚本代码
   //    * 创建liquibase脚本文件
@@ -81,7 +81,9 @@ pub fn add_menu_group(
   let mut files: Vec<FileInfo> = Vec::new();
   if let Ok(true) = menu_group_path.try_exists() {
     files.push(FileInfo {
-      path: file_path_config.liquibase_menu_group_insert_file_path.clone(),
+      path: file_path_config
+        .liquibase_menu_group_insert_file_path
+        .clone(),
       operation: FileOperation::Ignore,
       message: "文件已存在，不覆盖".to_string(),
     });
@@ -90,25 +92,39 @@ pub fn add_menu_group(
     fs::write(menu_group_path, codes)?;
 
     files.push(FileInfo {
-      path: file_path_config.liquibase_menu_group_insert_file_path.clone(),
+      path: file_path_config
+        .liquibase_menu_group_insert_file_path
+        .clone(),
       operation: FileOperation::Add,
       message: "创建成功".to_string(),
     });
   }
 
-  append_include_tag_to_changelog_file(&file_path_config.liquibase_menu_group_insert_file_path, &file_path_config.liquibase_root_file_include_path).map_err(into_napi)?;
+  append_include_tag_to_changelog_file(
+    &file_path_config.liquibase_menu_group_insert_file_path,
+    &file_path_config.liquibase_root_file_include_path,
+  )
+  .map_err(into_napi)?;
   files.push(FileInfo {
     path: file_path_config.liquibase_root_file_include_path,
     operation: FileOperation::Modify,
     message: "修改成功".to_string(),
   });
 
-  let committed_files = vec![&file_path_config.liquibase_root_file_full_path, &file_path_config.liquibase_menu_group_insert_file_path];
-  let commit_info = commit_files(&file_path_config.project_root_dir, &format!("feat: 新增菜单分组 {}", &new_group.title), committed_files).map_err(into_napi)?;
+  let committed_files = vec![
+    &file_path_config.liquibase_root_file_full_path,
+    &file_path_config.liquibase_menu_group_insert_file_path,
+  ];
+  let commit_info = commit_files(
+    &file_path_config.project_root_dir,
+    &format!("feat: 新增菜单分组 {}", &new_group.title),
+    committed_files,
+  )
+  .map_err(into_napi)?;
 
   Ok(CodeGenerateResult {
     commit_hash: commit_info,
     commit_time: Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-    files
+    files,
   })
 }
