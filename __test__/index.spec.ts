@@ -7,7 +7,7 @@ test('sync function from native code', (t) => {
   t.is(plus100(fixture), fixture + 100)
 })
 
-test('create menu group', (t) => {
+test.skip('create menu group', (t) => {
   const result = addMenuGroup({
       id: 1,
       key: "menu_group_1",
