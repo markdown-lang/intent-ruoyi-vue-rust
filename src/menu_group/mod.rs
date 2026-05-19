@@ -126,11 +126,11 @@ mod tests {
       route: "menu-group-1".to_string(),
       seq: 1,
       parent_id: 0,
-      client_type: None
+      client_type: None,
     };
     let modify_info = ModifyInfo {
-        author: "cx".to_string(),
-        time: "2026-05-19 20:50".to_string(),
+      author: "cx".to_string(),
+      time: "2026-05-19 20:50".to_string(),
     };
     let file_path_config = FilePathConfig {
         liquibase_root_file_full_path: "D:\\sources\\markdown-lang\\ide-plugins\\vscode\\generated-code\\src\\main\\resources\\db\\changelog\\db.changelog-master.xml".to_string(),
