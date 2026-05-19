@@ -50,7 +50,6 @@ pub struct FilePathConfig {
   pub liquibase_root_file_full_path: String,
   pub liquibase_root_file_include_path: String,
   pub liquibase_menu_group_insert_file_path: String,
-  pub project_root_dir: String,
 }
 
 pub fn into_napi(err: anyhow::Error) -> napi::Error {
@@ -68,8 +67,7 @@ pub fn add_menu_group(
   //    * 生成liquibase脚本代码
   //    * 创建liquibase脚本文件
   // 2 修改 liquibase 根文件，引入新创建的 liquibase 文件
-  // 3 git commit 这两个文件
-  // 4 返回文件列表及提交信息
+  // 3 返回文件列表
 
   let menu_group_path = Path::new(&file_path_config.liquibase_menu_group_insert_file_path);
 
@@ -84,6 +82,11 @@ pub fn add_menu_group(
     });
   } else {
     let codes = generate_menu_group_liquibase(&new_group, modify_info).map_err(into_napi)?;
+
+    // 如果文件夹不存在，则递归创建
+    if let Some(dir) = menu_group_path.parent() {
+      fs::create_dir_all(dir)?;
+    }
     fs::write(menu_group_path, codes)?;
 
     files.push(FileInfo {
@@ -96,7 +99,7 @@ pub fn add_menu_group(
   }
 
   append_include_tag_to_changelog_file(
-    &file_path_config.liquibase_menu_group_insert_file_path,
+    &file_path_config.liquibase_root_file_full_path,
     &file_path_config.liquibase_root_file_include_path,
   )
   .map_err(into_napi)?;
@@ -107,4 +110,34 @@ pub fn add_menu_group(
   });
 
   Ok(CodeGenerateResult { files })
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  pub fn test_add_menu_group() {
+    let new_group = MenuGroup {
+      id: 1,
+      key: "menu_group_1".to_string(),
+      title: "菜单组1".to_string(),
+      icon: "#".to_string(),
+      route: "menu-group-1".to_string(),
+      seq: 1,
+      parent_id: 0,
+      client_type: None
+    };
+    let modify_info = ModifyInfo {
+        author: "cx".to_string(),
+        time: "2026-05-19 20:50".to_string(),
+    };
+    let file_path_config = FilePathConfig {
+        liquibase_root_file_full_path: "D:\\sources\\markdown-lang\\ide-plugins\\vscode\\generated-code\\src\\main\\resources\\db\\changelog\\db.changelog-master.xml".to_string(),
+        liquibase_root_file_include_path: "db/changelog/system/sys_menu/202605192050_insert_menu_group_1.xml".to_string(),
+        liquibase_menu_group_insert_file_path: "D:\\sources\\markdown-lang\\ide-plugins\\vscode\\generated-code\\src\\main\\resources\\db\\changelog\\system\\sys_menu\\202605192050_insert_menu_group_1.xml".to_string(),
+    };
+    let result = add_menu_group(new_group, modify_info, file_path_config).unwrap();
+    assert_eq!(2, result.files.len());
+  }
 }

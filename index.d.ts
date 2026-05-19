@@ -26,7 +26,6 @@ export interface FilePathConfig {
   liquibaseRootFileFullPath: string
   liquibaseRootFileIncludePath: string
   liquibaseMenuGroupInsertFilePath: string
-  projectRootDir: string
 }
 
 export interface MenuGroup {

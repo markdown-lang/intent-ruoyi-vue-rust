@@ -1,6 +1,8 @@
 use crate::menu_group::ModifyInfo;
+use chrono::NaiveDateTime;
 use quick_xml::Writer;
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
+use std::borrow::Cow;
 use std::io::Cursor;
 
 pub(crate) fn write_xml_declaration(writer: &mut Writer<Cursor<Vec<u8>>>) -> anyhow::Result<()> {
@@ -17,7 +19,12 @@ pub(crate) fn start_change_set_tag(
 ) -> anyhow::Result<()> {
   let mut change_set = BytesStart::new("changeSet");
   change_set.push_attribute(("author", modify_info.author.as_str()));
-  change_set.push_attribute(("id", modify_info.time.as_str()));
+
+  let id: Cow<str> = NaiveDateTime::parse_from_str(modify_info.time.as_str(), "%Y-%m-%d %H:%M")
+    .map(|dt| Cow::Owned(dt.format("%Y%m%d%H%M").to_string()))
+    .unwrap_or_else(|_| Cow::Borrowed(modify_info.time.as_str()));
+
+  change_set.push_attribute(("id", id.as_ref()));
   if run_on_change {
     change_set.push_attribute(("runOnChange", "true"));
   }
