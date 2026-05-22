@@ -1,5 +1,12 @@
 # `@intent-codes/intent-ruoyi-vue-rust`
 
+提交代码前，运行以下命令
+
+```sh
+cargo fmt
+cargo clippy
+```
+
 ![https://github.com/markdown-lang/intent-ruoyi-vue-rust/actions](https://github.com/markdown-lang/intent-ruoyi-vue-rust/workflows/CI/badge.svg)
 
 > Template project for writing node packages with napi-rs.
@@ -86,19 +93,3 @@ GitHub actions will do the rest job for you.
 
 > WARN: Don't run `npm publish` manually.
 
-```
-"x86_64-pc-windows-msvc",
-"x86_64-apple-darwin",
-"x86_64-unknown-linux-gnu",
-"x86_64-unknown-linux-musl",
-"aarch64-unknown-linux-gnu",
-"i686-pc-windows-msvc",
-"armv7-unknown-linux-gnueabihf",
-"aarch64-apple-darwin",
-"aarch64-linux-android",
-"x86_64-unknown-freebsd",
-"aarch64-unknown-linux-musl",
-"aarch64-pc-windows-msvc",
-"armv7-linux-androideabi",
-"wasm32-wasip1-threads"
-```

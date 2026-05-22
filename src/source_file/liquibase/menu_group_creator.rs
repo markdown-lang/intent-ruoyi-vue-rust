@@ -1,4 +1,4 @@
-use crate::menu_group::{MenuGroup, ModifyInfo};
+use crate::menu_group::{ChangeSetInfo, MenuGroup};
 use crate::source_file::liquibase_util::{
   add_column_with_computed_value, add_column_with_number_value, add_column_with_string_value,
   end_change_set_tag, end_database_change_log_tag, start_change_set_tag,
@@ -11,7 +11,7 @@ use std::io::Cursor;
 
 pub fn generate_menu_group_liquibase(
   menu_group: &MenuGroup,
-  modify_info: ModifyInfo,
+  change_set: ChangeSetInfo,
 ) -> Result<String> {
   let mut writer = Writer::new_with_indent(Cursor::new(Vec::new()), b' ', 4);
 
@@ -20,7 +20,7 @@ pub fn generate_menu_group_liquibase(
   // databaseChangeLog
   start_database_change_log_tag(&mut writer)?;
   // changeSet
-  start_change_set_tag(&mut writer, &modify_info, false)?;
+  start_change_set_tag(&mut writer, &change_set, false)?;
   // insert sys_menu
   let mut insert_sys_menu = BytesStart::new("insert");
   insert_sys_menu.push_attribute(("table_name", "sys_menu"));
@@ -37,7 +37,7 @@ pub fn generate_menu_group_liquibase(
   add_column_with_string_value(&mut writer, "status", "0")?;
   add_column_with_string_value(&mut writer, "icon", menu_group.icon.as_str())?;
   add_column_with_string_value(&mut writer, "remark", menu_group.title.as_str())?;
-  add_column_with_string_value(&mut writer, "create_by", modify_info.author.as_str())?;
+  add_column_with_string_value(&mut writer, "create_by", change_set.author.as_str())?;
   add_column_with_computed_value(&mut writer, "create_time", "now()")?;
 
   writer.write_event(Event::End(BytesEnd::new("insert")))?;
@@ -50,7 +50,7 @@ pub fn generate_menu_group_liquibase(
 
     add_column_with_number_value(&mut writer, "menu_id", menu_group.id)?;
     add_column_with_string_value(&mut writer, "client_type", client_type.as_str())?;
-    add_column_with_string_value(&mut writer, "create_by", modify_info.author.as_str())?;
+    add_column_with_string_value(&mut writer, "create_by", change_set.author.as_str())?;
     add_column_with_computed_value(&mut writer, "create_time", "now()")?;
 
     writer.write_event(Event::End(BytesEnd::new("insert")))?;
@@ -80,12 +80,12 @@ mod tests {
       client_type: Some("01".to_string()),
       parent_id: 0,
     };
-    let modify_info = ModifyInfo {
+    let change_set = ChangeSetInfo {
       author: "wzy".to_string(),
-      time: "202507311439".to_string(),
+      id: "202507311439".to_string(),
     };
 
-    let actual_code = generate_menu_group_liquibase(&menu_group, modify_info).unwrap();
+    let actual_code = generate_menu_group_liquibase(&menu_group, change_set).unwrap();
     let expect_code = r#"<?xml version="1.0" encoding="UTF-8"?>
 
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
@@ -128,12 +128,12 @@ mod tests {
       client_type: None,
       parent_id: 0,
     };
-    let modify_info = ModifyInfo {
+    let change_set = ChangeSetInfo {
       author: "wzy".to_string(),
-      time: "202507311439".to_string(),
+      id: "202507311439".to_string(),
     };
 
-    let actual_code = generate_menu_group_liquibase(&menu_group, modify_info).unwrap();
+    let actual_code = generate_menu_group_liquibase(&menu_group, change_set).unwrap();
     let expect_code = r#"<?xml version="1.0" encoding="UTF-8"?>
 
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">

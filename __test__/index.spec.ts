@@ -18,11 +18,11 @@ test.skip('create menu group', (t) => {
       parentId: 0
   }, {
       author: "cx",
-      time: "2026-05-19 20:50"
+      id: "202605192050"
   }, {
-      "liquibaseRootFileFullPath": "D:\\sources\\markdown-lang\\ide-plugins\\vscode\\generated-code\\src\\main\\resources\\db\\changelog\\db.changelog-master.xml",
-      "liquibaseRootFileIncludePath": "db/changelog/system/sys_menu/202605192050_insert_menu_group_1.xml",
-      "liquibaseMenuGroupInsertFilePath": "D:\\sources\\markdown-lang\\ide-plugins\\vscode\\generated-code\\src\\main\\resources\\db\\changelog\\system\\sys_menu"
+      liquibaseRootFileFullPath: "D:\\sources\\markdown-lang\\ide-plugins\\vscode\\generated-code\\server\\src\\main\\resources\\db\\changelog\\db.changelog-master.xml",
+      liquibaseNewFileIncludePath: "db/changelog/system/sys_menu/202605192050_insert_menu_group_1.xml",
+      liquibaseNewFileFullPath: "D:\\sources\\markdown-lang\\ide-plugins\\vscode\\generated-code\\server\\src\\main\\resources\\db\\changelog\\system\\sys_menu"
   });
   t.is(result.files.length, 2);
 })
