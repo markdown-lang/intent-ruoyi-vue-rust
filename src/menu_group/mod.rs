@@ -46,6 +46,7 @@ pub struct ChangeSetInfo {
 }
 
 #[napi(object)]
+#[derive(Clone)]
 pub struct FilePathConfig {
   /// liquibase changelog 根文件的完整路径
   pub liquibase_root_file_full_path: String,
@@ -103,7 +104,7 @@ pub fn add_menu_group(
   )
   .map_err(into_napi)?;
   files.push(FileInfo {
-    path: file_path_config.liquibase_new_file_include_path,
+    path: file_path_config.liquibase_root_file_full_path,
     operation: FileOperation::Modify,
     message: "修改成功".to_string(),
   });
@@ -132,11 +133,19 @@ mod tests {
       id: "202605192050".to_string(),
     };
     let file_path_config = FilePathConfig {
-        liquibase_root_file_full_path: "D:\\sources\\markdown-lang\\ide-plugins\\vscode\\generated-code\\src\\main\\resources\\db\\changelog\\db.changelog-master.xml".to_string(),
+        liquibase_root_file_full_path: "D:/sources/markdown-lang/ide-plugins/vscode/generated-code/server/src/main/resources/db/changelog/db.changelog-master.xml".to_string(),
         liquibase_new_file_include_path: "db/changelog/system/sys_menu/202605192050_insert_menu_group_1.xml".to_string(),
-        liquibase_new_file_full_path: "D:\\sources\\markdown-lang\\ide-plugins\\vscode\\generated-code\\src\\main\\resources\\db\\changelog\\system\\sys_menu\\202605192050_insert_menu_group_1.xml".to_string(),
+        liquibase_new_file_full_path: "D:/sources/markdown-lang/ide-plugins/vscode/generated-code/server/src/main/resources/db/changelog/system/sys_menu/202605192050_insert_menu_group_1.xml".to_string(),
     };
-    let result = add_menu_group(new_group, change_set, file_path_config).unwrap();
+    let result = add_menu_group(new_group, change_set, file_path_config.clone()).unwrap();
     assert_eq!(2, result.files.len());
+    assert_eq!(
+      file_path_config.liquibase_new_file_full_path,
+      result.files[0].path
+    );
+    assert_eq!(
+      file_path_config.liquibase_root_file_full_path,
+      result.files[1].path
+    );
   }
 }
