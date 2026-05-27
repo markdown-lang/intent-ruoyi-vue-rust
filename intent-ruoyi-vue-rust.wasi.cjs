@@ -109,6 +109,7 @@ const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule
 })
 module.exports = __napiModule.exports
 module.exports.addMenuGroup = __napiModule.exports.addMenuGroup
+module.exports.addMenuItem = __napiModule.exports.addMenuItem
 module.exports.createMyBatisXml = __napiModule.exports.createMyBatisXml
 module.exports.FileOperation = __napiModule.exports.FileOperation
 module.exports.plus100 = __napiModule.exports.plus100

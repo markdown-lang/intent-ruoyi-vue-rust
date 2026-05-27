@@ -1,10 +1,12 @@
 #![deny(clippy::all)]
 
-pub mod db_table_info;
-pub mod json_loader;
+mod db_table_info;
+mod json_loader;
 mod menu_group;
-pub mod quick_xml_util;
+mod menu_item;
+mod quick_xml_util;
 mod source_file;
+mod types;
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;

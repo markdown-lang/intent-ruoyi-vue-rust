@@ -58,6 +58,7 @@ const {
 })
 export default __napiModule.exports
 export const addMenuGroup = __napiModule.exports.addMenuGroup
+export const addMenuItem = __napiModule.exports.addMenuItem
 export const createMyBatisXml = __napiModule.exports.createMyBatisXml
 export const FileOperation = __napiModule.exports.FileOperation
 export const plus100 = __napiModule.exports.plus100

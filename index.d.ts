@@ -3,6 +3,9 @@
 /** 在分组下新增一个分组 */
 export declare function addMenuGroup(newGroup: MenuGroup, changeSetInfo: ChangeSetInfo, filePathConfig: FilePathConfig): CodeGenerateResult
 
+/** 在分组下新增一个菜单 */
+export declare function addMenuItem(newMenuItem: MenuItem, changeSetInfo: ChangeSetInfo, filePathConfig: FilePathConfig): CodeGenerateResult
+
 export interface ChangeSetInfo {
   author: string
   id: string
@@ -47,6 +50,29 @@ export interface MenuGroup {
   parentId: number
   /** 客户端类型 */
   clientType?: string
+}
+
+export interface MenuItem {
+  id: number
+  key: string
+  title: string
+  icon: string
+  route: string
+  seq: number
+  /** 默认为 0 */
+  parentId: number
+  /** 客户端类型 */
+  clientType?: string
+  /** 组件地址 */
+  component?: string
+  /** 权限字符串 */
+  perms?: string
+  /** 是否为外链 */
+  isFrame: boolean
+  /** 是否缓存 */
+  isCache: boolean
+  /** 显示状态 */
+  visible: boolean
 }
 
 export declare function plus100(input: number): number

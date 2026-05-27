@@ -1,43 +1,37 @@
 use crate::source_file::liquibase::changelog_master::append_include_tag_to_changelog_file;
-use crate::source_file::liquibase::menu_group_creator::generate_menu_group_liquibase;
+use crate::source_file::liquibase::menu_item_creator::generate_menu_item_liquibase;
 use crate::types::{
-  ChangeSetInfo, CodeGenerateResult, FileInfo, FileOperation, FilePathConfig, MenuGroup, into_napi,
+  ChangeSetInfo, CodeGenerateResult, FileInfo, FileOperation, FilePathConfig, MenuItem, into_napi,
 };
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::fs;
 use std::path::Path;
 
-/// 在分组下新增一个分组
+/// 在分组下新增一个菜单
 #[napi]
-pub fn add_menu_group(
-  new_group: MenuGroup,
+pub fn add_menu_item(
+  new_menu_item: MenuItem,
   change_set_info: ChangeSetInfo,
   file_path_config: FilePathConfig,
 ) -> Result<CodeGenerateResult> {
-  // 1 新增创建菜单分组的 liquibase 脚本
-  //    * 生成liquibase脚本代码
-  //    * 创建liquibase脚本文件
-  // 2 修改 liquibase 根文件，引入新创建的 liquibase 文件
-  // 3 返回文件列表
-
-  let menu_group_path = Path::new(&file_path_config.liquibase_new_file_full_path);
+  let menu_item_path = Path::new(&file_path_config.liquibase_new_file_full_path);
 
   let mut files: Vec<FileInfo> = Vec::new();
-  if let Ok(true) = menu_group_path.try_exists() {
+  if let Ok(true) = menu_item_path.try_exists() {
     files.push(FileInfo {
       path: file_path_config.liquibase_new_file_full_path.clone(),
       operation: FileOperation::Ignore,
       message: "文件已存在，不覆盖".to_string(),
     });
   } else {
-    let codes = generate_menu_group_liquibase(&new_group, change_set_info).map_err(into_napi)?;
+    let codes = generate_menu_item_liquibase(&new_menu_item, change_set_info).map_err(into_napi)?;
 
     // 如果文件夹不存在，则递归创建
-    if let Some(dir) = menu_group_path.parent() {
+    if let Some(dir) = menu_item_path.parent() {
       fs::create_dir_all(dir)?;
     }
-    fs::write(menu_group_path, codes)?;
+    fs::write(menu_item_path, codes)?;
 
     files.push(FileInfo {
       path: file_path_config.liquibase_new_file_full_path.clone(),
@@ -65,16 +59,21 @@ mod tests {
   use super::*;
 
   #[test]
-  pub fn test_add_menu_group() {
-    let new_group = MenuGroup {
+  pub fn test_add_menu_item() {
+    let new_item = MenuItem {
       id: 1,
-      key: "menu_group_1".to_string(),
-      title: "菜单组1".to_string(),
+      key: "menu_item_1".to_string(),
+      title: "菜单1".to_string(),
       icon: "#".to_string(),
-      route: "menu-group-1".to_string(),
+      route: "menu-item-1".to_string(),
       seq: 1,
       parent_id: 0,
       client_type: None,
+      component: Some("a/b/index".to_string()),
+      perms: Some("a:b:list".to_string()),
+      is_frame: false,
+      is_cache: true,
+      visible: true,
     };
     let change_set = ChangeSetInfo {
       author: "cx".to_string(),
@@ -82,10 +81,10 @@ mod tests {
     };
     let file_path_config = FilePathConfig {
         liquibase_root_file_full_path: "D:/sources/markdown-lang/ide-plugins/vscode/generated-code/server/src/main/resources/db/changelog/db.changelog-master.xml".to_string(),
-        liquibase_new_file_include_path: "db/changelog/system/sys_menu/202605192050_insert_menu_group_1.xml".to_string(),
-        liquibase_new_file_full_path: "D:/sources/markdown-lang/ide-plugins/vscode/generated-code/server/src/main/resources/db/changelog/system/sys_menu/202605192050_insert_menu_group_1.xml".to_string(),
+        liquibase_new_file_include_path: "db/changelog/system/sys_menu/202605192050_insert_menu_menu_item_1.xml".to_string(),
+        liquibase_new_file_full_path: "D:/sources/markdown-lang/ide-plugins/vscode/generated-code/server/src/main/resources/db/changelog/system/sys_menu/202605192050_insert_menu_menu_item_1.xml".to_string(),
     };
-    let result = add_menu_group(new_group, change_set, file_path_config.clone()).unwrap();
+    let result = add_menu_item(new_item, change_set, file_path_config.clone()).unwrap();
     assert_eq!(2, result.files.len());
     assert_eq!(
       file_path_config.liquibase_new_file_full_path,

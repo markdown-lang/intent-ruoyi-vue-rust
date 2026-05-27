@@ -3,7 +3,7 @@
 authors = ["xiaohulu <76711619@qq.com>"]
 edition = "2024"
 name = "intent_ruoyi_vue_rust"
-version = "0.0.6"
+version = "0.0.7"
 
 [lib]
 crate-type = ["cdylib"]

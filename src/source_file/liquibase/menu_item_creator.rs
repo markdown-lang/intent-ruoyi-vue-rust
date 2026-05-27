@@ -3,14 +3,14 @@ use crate::source_file::liquibase_util::{
   end_change_set_tag, end_database_change_log_tag, start_change_set_tag,
   start_database_change_log_tag, write_xml_declaration,
 };
-use crate::types::{ChangeSetInfo, MenuGroup};
+use crate::types::{ChangeSetInfo, MenuItem};
 use anyhow::Result;
 use quick_xml::Writer;
 use quick_xml::events::{BytesEnd, BytesStart, Event};
 use std::io::Cursor;
 
-pub fn generate_menu_group_liquibase(
-  menu_group: &MenuGroup,
+pub fn generate_menu_item_liquibase(
+  menu_item: &MenuItem,
   change_set: ChangeSetInfo,
 ) -> Result<String> {
   let mut writer = Writer::new_with_indent(Cursor::new(Vec::new()), b' ', 4);
@@ -26,29 +26,48 @@ pub fn generate_menu_group_liquibase(
   insert_sys_menu.push_attribute(("table_name", "sys_menu"));
   writer.write_event(Event::Start(insert_sys_menu))?;
 
-  add_column_with_number_value(&mut writer, "menu_id", menu_group.id)?;
-  add_column_with_string_value(&mut writer, "menu_name", menu_group.title.as_str())?;
-  add_column_with_number_value(&mut writer, "parent_id", menu_group.parent_id)?;
-  add_column_with_number_value(&mut writer, "order_num", menu_group.seq)?;
-  add_column_with_string_value(&mut writer, "path", menu_group.route.as_str())?;
-  add_column_with_number_value(&mut writer, "is_frame", 1)?;
-  add_column_with_string_value(&mut writer, "menu_type", "M")?;
-  add_column_with_string_value(&mut writer, "visible", "0")?;
+  add_column_with_number_value(&mut writer, "menu_id", menu_item.id)?;
+  add_column_with_string_value(&mut writer, "menu_name", menu_item.title.as_str())?;
+  add_column_with_number_value(&mut writer, "parent_id", menu_item.parent_id)?;
+  add_column_with_number_value(&mut writer, "order_num", menu_item.seq)?;
+  add_column_with_string_value(&mut writer, "path", menu_item.route.as_str())?;
+  if let Some(component) = &menu_item.component {
+    add_column_with_string_value(&mut writer, "component", component.as_str())?;
+  }
+  add_column_with_number_value(
+    &mut writer,
+    "is_frame",
+    if menu_item.is_frame { 0 } else { 1 },
+  )?;
+  add_column_with_number_value(
+    &mut writer,
+    "is_cache",
+    if menu_item.is_cache { 0 } else { 1 },
+  )?;
+  add_column_with_string_value(&mut writer, "menu_type", "C")?;
+  add_column_with_string_value(
+    &mut writer,
+    "visible",
+    if menu_item.visible { "0" } else { "1" },
+  )?;
   add_column_with_string_value(&mut writer, "status", "0")?;
-  add_column_with_string_value(&mut writer, "icon", menu_group.icon.as_str())?;
-  add_column_with_string_value(&mut writer, "remark", menu_group.title.as_str())?;
+  if let Some(perms) = &menu_item.perms {
+    add_column_with_string_value(&mut writer, "perms", perms.as_str())?;
+  }
+  add_column_with_string_value(&mut writer, "icon", menu_item.icon.as_str())?;
+  add_column_with_string_value(&mut writer, "remark", menu_item.title.as_str())?;
   add_column_with_string_value(&mut writer, "create_by", change_set.author.as_str())?;
   add_column_with_computed_value(&mut writer, "create_time", "now()")?;
 
   writer.write_event(Event::End(BytesEnd::new("insert")))?;
 
   // insert sys_menu_client_type
-  if let Some(ref client_type) = menu_group.client_type {
+  if let Some(ref client_type) = menu_item.client_type {
     let mut insert_client_type = BytesStart::new("insert");
     insert_client_type.push_attribute(("table_name", "sys_menu_client_type"));
     writer.write_event(Event::Start(insert_client_type))?;
 
-    add_column_with_number_value(&mut writer, "menu_id", menu_group.id)?;
+    add_column_with_number_value(&mut writer, "menu_id", menu_item.id)?;
     add_column_with_string_value(&mut writer, "client_type", client_type.as_str())?;
     add_column_with_string_value(&mut writer, "create_by", change_set.author.as_str())?;
     add_column_with_computed_value(&mut writer, "create_time", "now()")?;
@@ -70,38 +89,46 @@ mod tests {
 
   #[test]
   fn generate_success() {
-    let menu_group = MenuGroup {
+    let menu_item = MenuItem {
       id: 1,
       key: "key1".to_string(),
-      title: "分组1".to_string(),
+      title: "菜单1".to_string(),
       route: "path1".to_string(),
       seq: 100,
       icon: "icon1".to_string(),
       client_type: Some("01".to_string()),
       parent_id: 0,
+      component: Some("a/b/index".to_string()),
+      perms: Some("a:b:list".to_string()),
+      is_frame: false,
+      is_cache: true,
+      visible: true,
     };
     let change_set = ChangeSetInfo {
       author: "wzy".to_string(),
       id: "202507311439".to_string(),
     };
 
-    let actual_code = generate_menu_group_liquibase(&menu_group, change_set).unwrap();
+    let actual_code = generate_menu_item_liquibase(&menu_item, change_set).unwrap();
     let expect_code = r#"<?xml version="1.0" encoding="UTF-8"?>
 
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet author="wzy" id="202507311439">
         <insert table_name="sys_menu">
             <column name="menu_id" valueNumeric="1"/>
-            <column name="menu_name" value="分组1"/>
+            <column name="menu_name" value="菜单1"/>
             <column name="parent_id" valueNumeric="0"/>
             <column name="order_num" valueNumeric="100"/>
             <column name="path" value="path1"/>
+            <column name="component" value="a/b/index"/>
             <column name="is_frame" valueNumeric="1"/>
-            <column name="menu_type" value="M"/>
+            <column name="is_cache" valueNumeric="0"/>
+            <column name="menu_type" value="C"/>
             <column name="visible" value="0"/>
             <column name="status" value="0"/>
+            <column name="perms" value="a:b:list"/>
             <column name="icon" value="icon1"/>
-            <column name="remark" value="分组1"/>
+            <column name="remark" value="菜单1"/>
             <column name="create_by" value="wzy"/>
             <column name="create_time" valueComputed="now()"/>
         </insert>
@@ -118,38 +145,46 @@ mod tests {
 
   #[test]
   fn generate_when_no_client_type() {
-    let menu_group = MenuGroup {
+    let menu_item = MenuItem {
       id: 1,
       key: "key1".to_string(),
-      title: "分组1".to_string(),
+      title: "菜单1".to_string(),
       route: "path1".to_string(),
       seq: 100,
       icon: "icon1".to_string(),
       client_type: None,
       parent_id: 0,
+      component: Some("a/b/index".to_string()),
+      perms: Some("a:b:list".to_string()),
+      is_frame: false,
+      is_cache: true,
+      visible: true,
     };
     let change_set = ChangeSetInfo {
       author: "wzy".to_string(),
       id: "202507311439".to_string(),
     };
 
-    let actual_code = generate_menu_group_liquibase(&menu_group, change_set).unwrap();
+    let actual_code = generate_menu_item_liquibase(&menu_item, change_set).unwrap();
     let expect_code = r#"<?xml version="1.0" encoding="UTF-8"?>
 
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet author="wzy" id="202507311439">
         <insert table_name="sys_menu">
             <column name="menu_id" valueNumeric="1"/>
-            <column name="menu_name" value="分组1"/>
+            <column name="menu_name" value="菜单1"/>
             <column name="parent_id" valueNumeric="0"/>
             <column name="order_num" valueNumeric="100"/>
             <column name="path" value="path1"/>
+            <column name="component" value="a/b/index"/>
             <column name="is_frame" valueNumeric="1"/>
-            <column name="menu_type" value="M"/>
+            <column name="is_cache" valueNumeric="0"/>
+            <column name="menu_type" value="C"/>
             <column name="visible" value="0"/>
             <column name="status" value="0"/>
+            <column name="perms" value="a:b:list"/>
             <column name="icon" value="icon1"/>
-            <column name="remark" value="分组1"/>
+            <column name="remark" value="菜单1"/>
             <column name="create_by" value="wzy"/>
             <column name="create_time" valueComputed="now()"/>
         </insert>

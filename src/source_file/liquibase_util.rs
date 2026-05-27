@@ -1,7 +1,8 @@
-use crate::menu_group::ChangeSetInfo;
 use quick_xml::Writer;
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
 use std::io::Cursor;
+
+use crate::types::ChangeSetInfo;
 
 pub(crate) fn write_xml_declaration(writer: &mut Writer<Cursor<Vec<u8>>>) -> anyhow::Result<()> {
   let decl = BytesDecl::new("1.0", Some("UTF-8"), None);
