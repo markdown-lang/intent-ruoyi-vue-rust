@@ -16,6 +16,8 @@ quick-xml = "0.40.1"
 heck = "0.5.0"
 anyhow = "1"
 chrono = "0.4.0"
+oxc_ast = "0.131.0"
+oxc_parser = "0.131.0"
 
 [dependencies.serde]
 version = "1"
