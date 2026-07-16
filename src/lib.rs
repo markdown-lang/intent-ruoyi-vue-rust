@@ -7,6 +7,8 @@ mod menu_item;
 mod quick_xml_util;
 mod source_file;
 mod types;
+mod vue_script;
+mod ui_types;
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
