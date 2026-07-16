@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use oxc_allocator::{Allocator, ArenaVec, GetAllocator};
-use oxc_ast::ast::{Argument, ArrayExpression, BindingIdentifier, BindingPattern, BooleanLiteral, CallExpression, Directive, Expression, IdentifierName, IdentifierReference, ImportDeclaration, ImportDeclarationSpecifier, ImportDefaultSpecifier, ImportOrExportKind, ImportSpecifier, ModuleExportName, NumberBase, NumericLiteral, Program, Statement, StringLiteral, TSArrayType, TSBooleanKeyword, TSNumberKeyword, TSStringKeyword, TSType, TSTypeAnnotation, TSTypeParameterInstantiation, VariableDeclaration, VariableDeclarationKind, VariableDeclarator, WithClause};
+use oxc_ast::ast::{Argument, ArrayExpression, BindingIdentifier, BindingPattern, BooleanLiteral, CallExpression, Directive, Expression, IdentifierName, IdentifierReference, ImportDeclaration, ImportDeclarationSpecifier, ImportDefaultSpecifier, ImportOrExportKind, ImportSpecifier, ModuleExportName, NumberBase, NumericLiteral, Program, Statement, StringLiteral, TSArrayType, TSBooleanKeyword, TSNumberKeyword, TSStringKeyword, TSType, TSTypeAnnotation, TSTypeName, TSTypeParameterInstantiation, TSTypeReference, VariableDeclaration, VariableDeclarationKind, VariableDeclarator, WithClause};
 use oxc_ast::{AstBuilder, Comment};
 use oxc_ast::builder::GetAstBuilder;
 use oxc_codegen::Codegen;
@@ -268,6 +268,25 @@ impl<'a> ScriptAst<'a> {
       self.add_variable_declaration(VariableDeclarationKind::Const, name, init_expr);
    }
 
+   pub fn add_const_ref_object_array(&mut self, name: &'a str, type_name: &'a str) {
+      let empty_array = ArrayExpression::boxed(SPAN, ArenaVec::new_in(self), self);
+      let empty_array_argument = Argument::ArrayExpression(empty_array);
+
+      let ident_ref = IdentifierReference::boxed(SPAN, type_name, self);
+      let type_ref = TSTypeReference::boxed(
+         SPAN,
+         TSTypeName::IdentifierReference(ident_ref),
+         None::<TSTypeParameterInstantiation>,
+         self
+      );
+      let ts_type = TSType::TSTypeReference(type_ref);
+      let ts_array_type = TSType::TSArrayType(TSArrayType::boxed(SPAN, ts_type, self));
+
+      let init_expr = self.call_ref(ts_array_type, empty_array_argument);
+
+      self.add_variable_declaration(VariableDeclarationKind::Const, name, init_expr);
+   }
+
    fn call_ref(&mut self, ts_type: TSType<'a>, argument: Argument<'a>) -> Expression<'a> {
       // 调用 ref 函数
       let ref_ident_reference = IdentifierReference::boxed(SPAN, "ref", self);
@@ -466,5 +485,14 @@ mod tests {
       script_ast.add_const_ref_number_array("a");
       let actual_code = script_ast.to_code();
       assert_eq!(actual_code, "const a = ref<number[]>([]);\n");
+   }
+
+   #[test]
+   fn test_add_const_ref_object_array() {
+      let allocator = Allocator::new();
+      let mut script_ast = ScriptAst::new(&allocator);
+      script_ast.add_const_ref_object_array("a", "UserInfo");
+      let actual_code = script_ast.to_code();
+      assert_eq!(actual_code, "const a = ref<UserInfo[]>([]);\n");
    }
 }
