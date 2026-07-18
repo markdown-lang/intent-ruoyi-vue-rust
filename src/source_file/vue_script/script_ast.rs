@@ -1,6 +1,7 @@
 use std::borrow::Cow;
-use oxc_allocator::{Allocator, ArenaVec, GetAllocator};
-use oxc_ast::ast::{Argument, ArrayExpression, BindingIdentifier, BindingPattern, BooleanLiteral, CallExpression, Directive, Expression, IdentifierName, IdentifierReference, ImportDeclaration, ImportDeclarationSpecifier, ImportDefaultSpecifier, ImportOrExportKind, ImportSpecifier, ModuleExportName, NumberBase, NumericLiteral, Program, Statement, StringLiteral, TSArrayType, TSBooleanKeyword, TSNumberKeyword, TSStringKeyword, TSType, TSTypeAnnotation, TSTypeName, TSTypeParameterInstantiation, TSTypeReference, VariableDeclaration, VariableDeclarationKind, VariableDeclarator, WithClause};
+use std::fmt::Arguments;
+use oxc_allocator::{Allocator, ArenaBox, ArenaVec, GetAllocator};
+use oxc_ast::ast::{Argument, ArrayExpression, ArrowFunctionExpression, BindingIdentifier, BindingPattern, BlockStatement, BooleanLiteral, CallExpression, Directive, Expression, ExpressionStatement, FormalParameter, FormalParameterKind, FormalParameterRest, FormalParameters, FunctionBody, IdentifierName, IdentifierReference, ImportDeclaration, ImportDeclarationSpecifier, ImportDefaultSpecifier, ImportOrExportKind, ImportSpecifier, MemberExpression, ModuleExportName, NumberBase, NumericLiteral, Program, Statement, StaticMemberExpression, StringLiteral, TSArrayType, TSBooleanKeyword, TSNumberKeyword, TSStringKeyword, TSType, TSTypeAnnotation, TSTypeName, TSTypeParameterDeclaration, TSTypeParameterInstantiation, TSTypeReference, VariableDeclaration, VariableDeclarationKind, VariableDeclarator, WithClause};
 use oxc_ast::{AstBuilder, Comment};
 use oxc_ast::builder::GetAstBuilder;
 use oxc_codegen::Codegen;
@@ -182,6 +183,32 @@ impl<'a> ScriptAst<'a> {
    }
    //endregion
 
+   //region argument 实参
+   pub fn new_argument_string(&self, value: &'a str) -> Argument<'a> {
+      let literal = StringLiteral::boxed(SPAN, value, None, self);
+      Argument::StringLiteral(literal)
+   }
+
+   pub fn new_argument_number(&self, value: f64) -> Argument<'a> {
+      let literal = NumericLiteral::boxed(SPAN, value, None, NumberBase::Decimal, self);
+      Argument::NumericLiteral(literal)
+   }
+
+   pub fn new_argument_boolean(&self, value: bool) -> Argument<'a> {
+      let literal = BooleanLiteral::boxed(SPAN, value, self);
+      Argument::BooleanLiteral(literal)
+   }
+
+   pub fn new_argument_identifier(&self, name: &'a str) -> Argument<'a> {
+      Argument::Identifier(IdentifierReference::boxed(SPAN, name, self))
+   }
+
+   pub fn new_argument_empty_array(&self) -> Argument<'a> {
+      let empty_array = ArrayExpression::boxed(SPAN, ArenaVec::new_in(self), self);
+      Argument::ArrayExpression(empty_array)
+   }
+   //endregion
+
    //region const
    pub fn add_const_string(&mut self, name: &'a str, value: &'a str) {
       let value_literal = StringLiteral::boxed(SPAN, value, None, self);
@@ -212,9 +239,7 @@ impl<'a> ScriptAst<'a> {
    }
 
    pub fn add_const_ref_boolean(&mut self, name: &'a str, value: bool) {
-      // 函数的输入参数,布尔字面量
-      let literal = BooleanLiteral::boxed(SPAN, value, self);
-      let argument = Argument::BooleanLiteral(literal);
+      let argument = self.new_argument_boolean(value);
       let ts_type = TSType::TSBooleanKeyword(TSBooleanKeyword::boxed(SPAN, self));
 
       let init_expr = self.call_ref(ts_type, argument);
@@ -224,8 +249,7 @@ impl<'a> ScriptAst<'a> {
 
    pub fn add_const_ref_string(&mut self, name: &'a str, value: &'a str) {
       // 函数的输入参数,字符串字面量
-      let literal = StringLiteral::boxed(SPAN, value, None, self);
-      let argument = Argument::StringLiteral(literal);
+      let argument = self.new_argument_string(value);
       let ts_type = TSType::TSStringKeyword(TSStringKeyword::boxed(SPAN, self));
 
       let init_expr = self.call_ref(ts_type, argument);
@@ -234,9 +258,7 @@ impl<'a> ScriptAst<'a> {
    }
 
    pub fn add_const_ref_number(&mut self, name: &'a str, value: f64) {
-      // 函数的输入参数,字符串字面量
-      let literal = NumericLiteral::boxed(SPAN, value, None, NumberBase::Decimal, self);
-      let argument = Argument::NumericLiteral(literal);
+      let argument = self.new_argument_number(value);
       let ts_type = TSType::TSNumberKeyword(TSNumberKeyword::boxed(SPAN, self));
 
       let init_expr = self.call_ref(ts_type, argument);
@@ -245,8 +267,7 @@ impl<'a> ScriptAst<'a> {
    }
 
    pub fn add_const_ref_string_array(&mut self, name: &'a str) {
-      let empty_array = ArrayExpression::boxed(SPAN, ArenaVec::new_in(self), self);
-      let empty_array_argument = Argument::ArrayExpression(empty_array);
+      let empty_array_argument = self.new_argument_empty_array();
 
       let ts_type = TSType::TSStringKeyword(TSStringKeyword::boxed(SPAN, self));
       let ts_array_type = TSType::TSArrayType(TSArrayType::boxed(SPAN, ts_type, self));
@@ -257,8 +278,7 @@ impl<'a> ScriptAst<'a> {
    }
 
    pub fn add_const_ref_number_array(&mut self, name: &'a str) {
-      let empty_array = ArrayExpression::boxed(SPAN, ArenaVec::new_in(self), self);
-      let empty_array_argument = Argument::ArrayExpression(empty_array);
+      let empty_array_argument = self.new_argument_empty_array();
 
       let ts_type = TSType::TSNumberKeyword(TSNumberKeyword::boxed(SPAN, self));
       let ts_array_type = TSType::TSArrayType(TSArrayType::boxed(SPAN, ts_type, self));
@@ -269,8 +289,7 @@ impl<'a> ScriptAst<'a> {
    }
 
    pub fn add_const_ref_object_array(&mut self, name: &'a str, type_name: &'a str) {
-      let empty_array = ArrayExpression::boxed(SPAN, ArenaVec::new_in(self), self);
-      let empty_array_argument = Argument::ArrayExpression(empty_array);
+      let empty_array_argument = self.new_argument_empty_array();
 
       let ident_ref = IdentifierReference::boxed(SPAN, type_name, self);
       let type_ref = TSTypeReference::boxed(
@@ -339,6 +358,105 @@ impl<'a> ScriptAst<'a> {
       );
 
       self.statements.push(Statement::VariableDeclaration(var_declaration));
+   }
+   //endregion
+
+   //region arrow function
+
+
+   pub fn new_empty_function_arguments(&self) -> oxc_allocator::Vec<'a, Argument<'a>> {
+      ArenaVec::new_in(self)
+   }
+
+   pub fn new_empty_function_body(&self) -> oxc_allocator::Box<'a, FunctionBody<'a>> {
+      FunctionBody::boxed(SPAN, ArenaVec::new_in(self), ArenaVec::new_in(self), self)
+   }
+
+   pub fn new_empty_arrow_function_params(&self) -> oxc_allocator::Box<'a, FormalParameters<'a>> {
+      FormalParameters::boxed(
+         SPAN,
+         FormalParameterKind::ArrowFormalParameters,
+         ArenaVec::new_in(self),
+         None::<FormalParameterRest>,
+         self
+      )
+   }
+
+   pub fn new_formal_string_parameter(&self, name: &'a str) -> FormalParameter<'a> {
+      let bind_ident = BindingIdentifier::boxed(SPAN, name, self);
+      let pattern = BindingPattern::BindingIdentifier(bind_ident);
+
+      let ts_type = TSType::TSStringKeyword(TSStringKeyword::boxed(SPAN, self));
+      let ts_type_anno = TSTypeAnnotation::boxed(SPAN, ts_type, self);
+
+      FormalParameter::new(
+         SPAN,
+         ArenaVec::new_in(self),
+         pattern,
+         Some(ts_type_anno),
+         None::<Expression>,
+         false,
+         None,
+         false,
+         false,
+         self
+      )
+   }
+
+   fn new_call_object_method(&self, object_name: &'a str, method_name: &'a str, args: ArenaVec<'a, Argument<'a>>) -> Statement<'a> {
+      let object_expr = Expression::Identifier(IdentifierReference::boxed(SPAN, object_name, self));
+      let method_name_ident = IdentifierName::new(SPAN, method_name, self);
+      let static_member = StaticMemberExpression::boxed(SPAN, object_expr, method_name_ident, false, self);
+      let callee = Expression::StaticMemberExpression(static_member);
+
+      let call_expr = CallExpression::boxed(
+         SPAN,
+         callee,
+         None::<TSTypeParameterInstantiation>,
+         args,
+         false,
+         self);
+      let expression = Expression::CallExpression(call_expr);
+
+      Statement::ExpressionStatement(ExpressionStatement::boxed(SPAN, expression, self))
+   }
+
+   pub fn append_statement(&self, function_body: &mut ArenaBox<'a, FunctionBody<'a>>, statement: Statement<'a>) {
+      function_body.statements.push(statement);
+   }
+
+   pub fn append_formal_parameter(&self, parameters: &mut ArenaBox<'a, FormalParameters<'a>>, parameter: FormalParameter<'a> ) {
+      parameters.items.push(parameter);
+   }
+
+   pub fn append_argument(&self, arguments: &mut ArenaVec<'a, Argument<'a>>, argument: Argument<'a>) {
+      arguments.push(argument);
+   }
+
+   fn new_call_console_log(&self, args: ArenaVec<'a, Argument<'a>>) -> Statement<'a> {
+      self.new_call_object_method("console", "log", args)
+   }
+
+   /// 以add开头的方法，都是直接在root节点中添加子节点
+   fn add_call_console_log(&mut self, args: ArenaVec<'a, Argument<'a>>) {
+      let statement = self.new_call_object_method("console", "log", args);
+      self.statements.push(statement);
+   }
+
+   pub fn add_arrow_function(&mut self, name: &'a str, params: ArenaBox<'a, FormalParameters<'a>>, body: ArenaBox<'a, FunctionBody<'a>>) {
+      let arrow_expr = ArrowFunctionExpression::boxed(
+         SPAN,
+         false,
+         false,
+         None::<TSTypeParameterDeclaration>,
+         params,
+         None::<TSTypeAnnotation>,
+         body,
+         self
+      );
+      let init_expr = Expression::ArrowFunctionExpression(arrow_expr);
+
+      self.add_variable_declaration(VariableDeclarationKind::Const, name, init_expr);
    }
    //endregion
 
@@ -494,5 +612,52 @@ mod tests {
       script_ast.add_const_ref_object_array("a", "UserInfo");
       let actual_code = script_ast.to_code();
       assert_eq!(actual_code, "const a = ref<UserInfo[]>([]);\n");
+   }
+
+   #[test]
+   fn test_add_arrow_function_empty() {
+      let allocator = Allocator::new();
+      let mut script_ast = ScriptAst::new(&allocator);
+      let parameters = script_ast.new_empty_arrow_function_params();
+      let function_body = script_ast.new_empty_function_body();
+      script_ast.add_arrow_function("a", parameters, function_body);
+      let actual_code = script_ast.to_code();
+      assert_eq!(actual_code, "const a = () => {};\n");
+   }
+
+   #[test]
+   fn test_new_call_console_log() {
+      let allocator = Allocator::new();
+      let mut script_ast = ScriptAst::new(&allocator);
+      let parameters = script_ast.new_empty_arrow_function_params();
+      let function_body = script_ast.new_empty_function_body();
+
+      let mut arguments = script_ast.new_empty_function_arguments();
+      script_ast.append_argument(&mut arguments, script_ast.new_argument_string("a"));
+      script_ast.append_argument(&mut arguments, script_ast.new_argument_number(1.0));
+      script_ast.append_argument(&mut arguments, script_ast.new_argument_boolean(true));
+
+      script_ast.add_call_console_log(arguments);
+      let actual_code = script_ast.to_code();
+      assert_eq!(actual_code, "console.log(\"a\", 1, true);\n");
+   }
+
+   #[test]
+   fn test_add_arrow_function_one_parameter_one_statement() {
+      let allocator = Allocator::new();
+      let mut script_ast = ScriptAst::new(&allocator);
+      let mut parameters = script_ast.new_empty_arrow_function_params();
+      let parameter = script_ast.new_formal_string_parameter("b");
+      script_ast.append_formal_parameter(&mut parameters, parameter);
+      let mut function_body = script_ast.new_empty_function_body();
+
+      let mut function_arguments = script_ast.new_empty_function_arguments();
+      let argument = script_ast.new_argument_identifier("b");
+      script_ast.append_argument(&mut function_arguments, argument);
+      let console_log = script_ast.new_call_console_log(function_arguments);
+      script_ast.append_statement(&mut function_body, console_log);
+      script_ast.add_arrow_function("a", parameters, function_body);
+      let actual_code = script_ast.to_code();
+      assert_eq!(actual_code, "const a = (b: string) => {\n\tconsole.log(b);\n};\n");
    }
 }
