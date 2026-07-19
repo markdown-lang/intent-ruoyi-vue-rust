@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::Arguments;
 use oxc_allocator::{Allocator, ArenaBox, ArenaVec, GetAllocator};
-use oxc_ast::ast::{Argument, ArrayExpression, ArrowFunctionExpression, BindingIdentifier, BindingPattern, BlockStatement, BooleanLiteral, CallExpression, Directive, Expression, ExpressionStatement, FormalParameter, FormalParameterKind, FormalParameterRest, FormalParameters, FunctionBody, IdentifierName, IdentifierReference, ImportDeclaration, ImportDeclarationSpecifier, ImportDefaultSpecifier, ImportOrExportKind, ImportSpecifier, MemberExpression, ModuleExportName, NumberBase, NumericLiteral, Program, Statement, StaticMemberExpression, StringLiteral, TSArrayType, TSBooleanKeyword, TSNumberKeyword, TSStringKeyword, TSType, TSTypeAnnotation, TSTypeName, TSTypeParameterDeclaration, TSTypeParameterInstantiation, TSTypeReference, VariableDeclaration, VariableDeclarationKind, VariableDeclarator, WithClause};
+use oxc_ast::ast::{Argument, ArrayExpression, ArrowFunctionExpression, AssignmentExpression, AssignmentOperator, AssignmentTarget, BindingIdentifier, BindingPattern, BlockStatement, BooleanLiteral, CallExpression, Directive, Expression, ExpressionStatement, FormalParameter, FormalParameterKind, FormalParameterRest, FormalParameters, FunctionBody, IdentifierName, IdentifierReference, ImportDeclaration, ImportDeclarationSpecifier, ImportDefaultSpecifier, ImportOrExportKind, ImportSpecifier, MemberExpression, ModuleExportName, NumberBase, NumericLiteral, Program, Statement, StaticMemberExpression, StringLiteral, TSArrayType, TSBooleanKeyword, TSNumberKeyword, TSStringKeyword, TSType, TSTypeAnnotation, TSTypeName, TSTypeParameterDeclaration, TSTypeParameterInstantiation, TSTypeReference, VariableDeclaration, VariableDeclarationKind, VariableDeclarator, WithClause};
 use oxc_ast::{AstBuilder, Comment};
 use oxc_ast::builder::GetAstBuilder;
 use oxc_codegen::Codegen;
@@ -361,6 +361,57 @@ impl<'a> ScriptAst<'a> {
    }
    //endregion
 
+   //region set ref value
+
+   fn new_set_ref_value(&self, name: &'a str, value: Expression<'a>) -> Statement<'a> {
+      let ident_ref = IdentifierReference::boxed(SPAN, name, self);
+      let object_expr = Expression::Identifier(ident_ref);
+      let method_name_ident = IdentifierName::new(SPAN, "value", self);
+      let static_member = StaticMemberExpression::boxed(SPAN, object_expr, method_name_ident, false, self);
+      let left_target = AssignmentTarget::StaticMemberExpression(static_member);
+
+      let assign_expr = AssignmentExpression::boxed(SPAN, AssignmentOperator::Assign, left_target, value, self);
+      let expression = Expression::AssignmentExpression(assign_expr);
+
+      Statement::ExpressionStatement(ExpressionStatement::boxed(SPAN, expression, self))
+   }
+   pub fn new_set_ref_string_value(&self, name: &'a str, value: &'a str) -> Statement<'a> {
+      let right_string_literal = StringLiteral::boxed(SPAN, value, None, self);
+      let right_expr = Expression::StringLiteral(right_string_literal);
+
+      self.new_set_ref_value(name, right_expr)
+   }
+
+   pub fn new_set_ref_number_value(&self, name: &'a str, value: f64) -> Statement<'a> {
+      let number_literal = NumericLiteral::boxed(SPAN, value, None, NumberBase::Decimal, self);
+      let right_expr = Expression::NumericLiteral(number_literal);
+
+      self.new_set_ref_value(name, right_expr)
+   }
+
+   pub fn new_set_ref_boolean_value(&self, name: &'a str, value: bool) -> Statement<'a> {
+      let bool_literal = BooleanLiteral::boxed(SPAN, value, self);
+      let right_expr = Expression::BooleanLiteral(bool_literal);
+
+      self.new_set_ref_value(name, right_expr)
+   }
+
+   pub fn add_set_ref_string_value(&mut self, name: &'a str, value: &'a str) {
+      let statement = self.new_set_ref_string_value(name, value);
+      self.statements.push(statement);
+   }
+
+   pub fn add_set_ref_number_value(&mut self, name: &'a str, value: f64) {
+      let statement = self.new_set_ref_number_value(name, value);
+      self.statements.push(statement);
+   }
+
+   pub fn add_set_ref_boolean_value(&mut self, name: &'a str, value: bool) {
+      let statement = self.new_set_ref_boolean_value(name, value);
+      self.statements.push(statement);
+   }
+   //endregion
+
    //region arrow function
 
 
@@ -448,6 +499,22 @@ impl<'a> ScriptAst<'a> {
          SPAN,
          false,
          false,
+         None::<TSTypeParameterDeclaration>,
+         params,
+         None::<TSTypeAnnotation>,
+         body,
+         self
+      );
+      let init_expr = Expression::ArrowFunctionExpression(arrow_expr);
+
+      self.add_variable_declaration(VariableDeclarationKind::Const, name, init_expr);
+   }
+
+   pub fn add_arrow_async_function(&mut self, name: &'a str, params: ArenaBox<'a, FormalParameters<'a>>, body: ArenaBox<'a, FunctionBody<'a>>) {
+      let arrow_expr = ArrowFunctionExpression::boxed(
+         SPAN,
+         false,
+         true,
          None::<TSTypeParameterDeclaration>,
          params,
          None::<TSTypeAnnotation>,
@@ -626,7 +693,18 @@ mod tests {
    }
 
    #[test]
-   fn test_new_call_console_log() {
+   fn test_add_arrow_async_function_empty() {
+      let allocator = Allocator::new();
+      let mut script_ast = ScriptAst::new(&allocator);
+      let parameters = script_ast.new_empty_arrow_function_params();
+      let function_body = script_ast.new_empty_function_body();
+      script_ast.add_arrow_async_function("a", parameters, function_body);
+      let actual_code = script_ast.to_code();
+      assert_eq!(actual_code, "const a = async () => {};\n");
+   }
+
+   #[test]
+   fn test_add_call_console_log() {
       let allocator = Allocator::new();
       let mut script_ast = ScriptAst::new(&allocator);
       let parameters = script_ast.new_empty_arrow_function_params();
@@ -660,4 +738,32 @@ mod tests {
       let actual_code = script_ast.to_code();
       assert_eq!(actual_code, "const a = (b: string) => {\n\tconsole.log(b);\n};\n");
    }
+
+   #[test]
+   fn test_add_set_ref_string_value() {
+      let allocator = Allocator::new();
+      let mut script_ast = ScriptAst::new(&allocator);
+      script_ast.add_set_ref_string_value("a", "b");
+      let actual_code = script_ast.to_code();
+      assert_eq!(actual_code, "a.value = \"b\";\n");
+   }
+
+   #[test]
+   fn test_add_set_ref_number_value() {
+      let allocator = Allocator::new();
+      let mut script_ast = ScriptAst::new(&allocator);
+      script_ast.add_set_ref_number_value("a", 1.0);
+      let actual_code = script_ast.to_code();
+      assert_eq!(actual_code, "a.value = 1;\n");
+   }
+
+   #[test]
+   fn test_add_set_ref_boolean_value() {
+      let allocator = Allocator::new();
+      let mut script_ast = ScriptAst::new(&allocator);
+      script_ast.add_set_ref_boolean_value("a", true);
+      let actual_code = script_ast.to_code();
+      assert_eq!(actual_code, "a.value = true;\n");
+   }
+
 }
