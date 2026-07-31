@@ -1,5 +1,5 @@
-use napi_derive::napi;
 use napi::bindgen_prelude::*;
+use napi_derive::napi;
 
 // ==================== 基础通用类型 ====================
 
@@ -7,45 +7,45 @@ use napi::bindgen_prelude::*;
 #[derive(Debug, Clone)]
 #[napi]
 pub enum NumberOrString {
-    Number(f64),
-    String(String),
+  Number(f64),
+  String(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[napi(string_enum)]
 pub enum UIParagraphType {
-    None,
-    Data,
-    Ui,
-    Changelog,
+  None,
+  Data,
+  Ui,
+  Changelog,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[napi(string_enum)]
 pub enum MatchOperation {
-    Contains,
-    Equal,
-    Between,
-    ItemEqual,
-    ItemContains,
+  Contains,
+  Equal,
+  Between,
+  ItemEqual,
+  ItemContains,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[napi(string_enum)]
 pub enum UIComponentKey {
-    TextInput,
-    NumberInput,
-    Textarea,
-    DatePicker,
-    Select,
-    DictSelect,
-    DictCheckbox,
-    DictRadio,
-    ImageUpload,
-    FileUpload,
-    Editor,
+  TextInput,
+  NumberInput,
+  Textarea,
+  DatePicker,
+  Select,
+  DictSelect,
+  DictCheckbox,
+  DictRadio,
+  ImageUpload,
+  FileUpload,
+  Editor,
 }
-// 
+//
 // #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 // #[napi(string_enum="")]
 // pub enum UIParamActionKey {
@@ -54,7 +54,7 @@ pub enum UIComponentKey {
 //     #[napi(rename = "form_reset")]
 //     FormReset,
 // }
-// 
+//
 // #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 // #[napi]
 // pub enum UIActionKey {
@@ -75,7 +75,7 @@ pub enum UIComponentKey {
 //     #[napi(rename = "set_table_columns")]
 //     SetTableColumns,
 // }
-// 
+//
 // #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 // #[napi]
 // pub enum ColumnComponentKey {
@@ -94,7 +94,7 @@ pub enum UIComponentKey {
 //     #[napi(rename = "Dict")]
 //     Dict,
 // }
-// 
+//
 // #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 // #[napi]
 // pub enum DatePickerMode {
@@ -123,22 +123,22 @@ pub enum UIComponentKey {
 //     #[napi(rename = "yearrange")]
 //     YearRange,
 // }
-// 
+//
 // // ==================== 页面顶层结构 ====================
-// 
+//
 #[derive(Debug, Clone)]
 #[napi(object)]
 pub struct UIPage {
-    pub parent_paths: Vec<String>,
-    pub content: String, // UIPageContent,
+  pub parent_paths: Vec<String>,
+  pub content: String, // UIPageContent,
 }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct UIPageContent {
 //     pub view: Option<UIView>,
 // }
-// 
+//
 // /// 视图模式判别联合：目录模式 / 模板模式
 // #[derive(Debug, Clone)]
 // #[napi(discriminant = "type")]
@@ -148,27 +148,27 @@ pub struct UIPage {
 //     #[napi(rename = "html")]
 //     Html(UIHtml),
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct UIOutline {
 //     pub root: CPage,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct UIHtml {
 //     pub content: String,
 // }
-// 
+//
 // // ==================== 页面根组件 ====================
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CPage {
 //     pub children: Vec<CPageChild>,
 // }
-// 
+//
 // /// CPage 子节点判别联合
 // #[derive(Debug, Clone)]
 // #[napi(discriminant = "type")]
@@ -180,9 +180,9 @@ pub struct UIPage {
 //     #[napi(rename = "form")]
 //     Form(CForm),
 // }
-// 
+//
 // // ==================== 表格组件体系 ====================
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CTable {
@@ -191,16 +191,16 @@ pub struct UIPage {
 //     pub columns: Option<CTableColumnSlot>,
 //     pub pagination: Option<bool>,
 // }
-// 
+//
 // // --- 查询参数区 ---
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CTableParamSlot {
 //     pub name: String,
 //     pub children: Vec<CTableParamChild>,
 // }
-// 
+//
 // /// 表格参数区子节点判别联合
 // #[derive(Debug, Clone)]
 // #[napi(discriminant = "type")]
@@ -210,7 +210,7 @@ pub struct UIPage {
 //     #[napi(rename = "tableParamAction")]
 //     ParamAction(CTableParamAction),
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CTableParamItem {
@@ -223,48 +223,48 @@ pub struct UIPage {
 //     pub value_field: Option<String>,
 //     pub label_field: Option<String>,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CTableParamAction {
 //     pub actions: Vec<UIParamActionKey>,
 // }
-// 
+//
 // // --- 操作按钮区 ---
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CTableActionSlot {
 //     pub start: Option<CTableActionStartSlot>,
 //     pub end: Option<CTableActionEndSlot>,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CTableActionStartSlot {
 //     pub children: Vec<CTableAction>,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CTableActionEndSlot {
 //     pub children: Vec<CTableAction>,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CTableAction {
 //     pub name: UIActionKey,
 // }
-// 
+//
 // // --- 表格列区 ---
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CTableColumnSlot {
 //     pub children: Vec<CTableColumnChild>,
 // }
-// 
+//
 // /// 表格列区子节点判别联合
 // #[derive(Debug, Clone)]
 // #[napi(discriminant = "type")]
@@ -274,7 +274,7 @@ pub struct UIPage {
 //     #[napi(rename = "tableColumnActions")]
 //     ColumnActions(CTableColumnActions),
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CTableColumn {
@@ -286,28 +286,28 @@ pub struct UIPage {
 //     pub precision: Option<i32>,
 //     pub thousandth: Option<bool>,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CTableColumnActions {
 //     pub actions: Vec<CTableColumnAction>,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CTableColumnAction {
 //     pub name: UIActionKey,
 // }
-// 
+//
 // // ==================== 对话框组件 ====================
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CDialog {
 //     pub width: Option<NumberOrString>,
 //     pub children: Vec<CDialogChild>,
 // }
-// 
+//
 // /// 对话框子节点判别联合
 // #[derive(Debug, Clone)]
 // #[napi(discriminant = "type")]
@@ -317,9 +317,9 @@ pub struct UIPage {
 //     #[napi(rename = "form")]
 //     Form(CForm),
 // }
-// 
+//
 // // ==================== 表单组件体系 ====================
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CForm {
@@ -328,7 +328,7 @@ pub struct UIPage {
 //     pub label_width: Option<NumberOrString>,
 //     pub fields: Vec<CFormFieldItem>,
 // }
-// 
+//
 // /// 表单项判别联合（含所有字段组件 + 空白占位）
 // #[derive(Debug, Clone)]
 // #[napi(discriminant = "type")]
@@ -358,9 +358,9 @@ pub struct UIPage {
 //     #[napi(rename = "BlankItem")]
 //     BlankItem(CBlankItem),
 // }
-// 
+//
 // // --- 各表单项结构体（CFormField 字段直接展开，对齐 TS 继承语义） ---
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CFormTextInput {
@@ -371,7 +371,7 @@ pub struct UIPage {
 //     pub minlength: Option<i32>,
 //     pub maxlength: Option<i32>,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CFormNumberInput {
@@ -384,7 +384,7 @@ pub struct UIPage {
 //     pub precision: i32,
 //     pub unit: Option<String>,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CFormTextarea {
@@ -394,7 +394,7 @@ pub struct UIPage {
 //     pub span: i32,
 //     pub rows: Option<i32>,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CFormDatePicker {
@@ -404,7 +404,7 @@ pub struct UIPage {
 //     pub span: i32,
 //     pub mode: DatePickerMode,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CFormSelect {
@@ -417,7 +417,7 @@ pub struct UIPage {
 //     pub label_field: String,
 //     pub unit: Option<String>,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CFormDictSelect {
@@ -427,7 +427,7 @@ pub struct UIPage {
 //     pub span: i32,
 //     pub dict_type: String,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CFormDictCheckbox {
@@ -437,7 +437,7 @@ pub struct UIPage {
 //     pub span: i32,
 //     pub dict_type: String,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CFormDictRadio {
@@ -447,7 +447,7 @@ pub struct UIPage {
 //     pub span: i32,
 //     pub dict_type: String,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CFormImageUpload {
@@ -456,7 +456,7 @@ pub struct UIPage {
 //     pub required: bool,
 //     pub span: i32,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CFormFileUpload {
@@ -465,7 +465,7 @@ pub struct UIPage {
 //     pub required: bool,
 //     pub span: i32,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CFormEditor {
@@ -474,15 +474,15 @@ pub struct UIPage {
 //     pub required: bool,
 //     pub span: i32,
 // }
-// 
+//
 // #[derive(Debug, Clone)]
 // #[napi(object)]
 // pub struct CBlankItem {
 //     pub span: Option<i32>,
 // }
-// 
+//
 // // ==================== 顶层全节点联合 ====================
-// 
+//
 // /// 所有组件节点的总联合类型，完全对应 TS 的 `CNode`
 // #[derive(Debug, Clone)]
 // #[napi(discriminant = "type")]

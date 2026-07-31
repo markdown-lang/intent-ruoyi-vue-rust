@@ -7,6 +7,12 @@ cargo fmt
 cargo clippy
 ```
 
+## 使用 rust 生成以下代码
+
+1. TypeScript Interface
+2. TypeScript API
+3. TypeScript Vue Script
+
 ![https://github.com/markdown-lang/intent-ruoyi-vue-rust/actions](https://github.com/markdown-lang/intent-ruoyi-vue-rust/workflows/CI/badge.svg)
 
 > Template project for writing node packages with napi-rs.

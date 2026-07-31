@@ -1,5 +1,14 @@
 use oxc_allocator::{Allocator, ArenaBox, ArenaVec, GetAllocator};
-use oxc_ast::ast::{Argument, AssignmentOperator, AssignmentTarget, BinaryOperator, BindingIdentifier, BindingPattern, BindingProperty, BindingRestElement, BlockStatement, CatchClause, CatchParameter, Declaration, Directive, Expression, FormalParameter, FormalParameterKind, FormalParameterRest, FormalParameters, FunctionBody, IdentifierName, ImportDeclarationSpecifier, ImportOrExportKind, ModuleExportName, NumberBase, ObjectExpression, ObjectPropertyKind, Program, PropertyKey, PropertyKind, Statement, StringLiteral, TSInterfaceBody, TSInterfaceHeritage, TSSignature, TSType, TSTypeAnnotation, TSTypeName, TSTypeParameterDeclaration, TSTypeParameterInstantiation, VariableDeclarationKind, VariableDeclarator, WithClause};
+use oxc_ast::ast::{
+  Argument, AssignmentOperator, AssignmentTarget, BinaryOperator, BindingIdentifier,
+  BindingPattern, BindingProperty, BindingRestElement, BlockStatement, CatchClause, CatchParameter,
+  Declaration, Directive, Expression, FormalParameter, FormalParameterKind, FormalParameterRest,
+  FormalParameters, FunctionBody, IdentifierName, ImportDeclarationSpecifier, ImportOrExportKind,
+  ModuleExportName, NumberBase, ObjectExpression, ObjectPropertyKind, Program, PropertyKey,
+  PropertyKind, Statement, StringLiteral, TSInterfaceBody, TSInterfaceHeritage, TSSignature,
+  TSType, TSTypeAnnotation, TSTypeName, TSTypeParameterDeclaration, TSTypeParameterInstantiation,
+  VariableDeclarationKind, VariableDeclarator, WithClause,
+};
 use oxc_ast::builder::{AstBuilder, GetAstBuilder};
 use oxc_ast::{Comment, CommentKind};
 use oxc_codegen::{Codegen, CodegenOptions, IndentChar};
@@ -84,13 +93,22 @@ impl<'a> ScriptAst<'a> {
 
     let source_literal = StringLiteral::new(SPAN, source, None, self);
 
-    let specifiers = ArenaVec::from_iter_in(named_imports.iter().map( |&name| {
-      // 本地作用域绑定名称
-      let imported = ModuleExportName::new_identifier_name(SPAN, name, self);
-      let local = BindingIdentifier::new(SPAN, name, self);
-      // 同名导入（无 as 别名）时 imported 传 None，代码生成自动复用 local 名称
-      ImportDeclarationSpecifier::new_import_specifier(SPAN, imported, local, ImportOrExportKind::Value, self)
-    }), self);
+    let specifiers = ArenaVec::from_iter_in(
+      named_imports.iter().map(|&name| {
+        // 本地作用域绑定名称
+        let imported = ModuleExportName::new_identifier_name(SPAN, name, self);
+        let local = BindingIdentifier::new(SPAN, name, self);
+        // 同名导入（无 as 别名）时 imported 传 None，代码生成自动复用 local 名称
+        ImportDeclarationSpecifier::new_import_specifier(
+          SPAN,
+          imported,
+          local,
+          ImportOrExportKind::Value,
+          self,
+        )
+      }),
+      self,
+    );
 
     let statement = Statement::new_import_declaration(
       SPAN,
@@ -114,13 +132,22 @@ impl<'a> ScriptAst<'a> {
 
     let source_literal = StringLiteral::new(SPAN, source, None, self);
 
-    let specifiers = ArenaVec::from_iter_in(named_imports.iter().map( |&name| {
-      // 本地作用域绑定名称
-      let imported = ModuleExportName::new_identifier_name(SPAN, name, self);
-      let local = BindingIdentifier::new(SPAN, name, self);
-      // 同名导入（无 as 别名）时 imported 传 None，代码生成自动复用 local 名称
-      ImportDeclarationSpecifier::new_import_specifier(SPAN, imported, local, ImportOrExportKind::Value, self)
-    }), self);
+    let specifiers = ArenaVec::from_iter_in(
+      named_imports.iter().map(|&name| {
+        // 本地作用域绑定名称
+        let imported = ModuleExportName::new_identifier_name(SPAN, name, self);
+        let local = BindingIdentifier::new(SPAN, name, self);
+        // 同名导入（无 as 别名）时 imported 传 None，代码生成自动复用 local 名称
+        ImportDeclarationSpecifier::new_import_specifier(
+          SPAN,
+          imported,
+          local,
+          ImportOrExportKind::Value,
+          self,
+        )
+      }),
+      self,
+    );
 
     let statement = Statement::new_import_declaration(
       SPAN,
@@ -144,17 +171,20 @@ impl<'a> ScriptAst<'a> {
 
     let source_literal = StringLiteral::new(SPAN, source, None, self);
 
-    let specifiers = ArenaVec::from_iter_in(named_imports.iter().map( |item| {
-      let (name, kind) = match item {
-        NamedImportItem::Value(name) => (*name, ImportOrExportKind::Value),
-        NamedImportItem::Type(name) => (*name, ImportOrExportKind::Type),
-      };
-      // 本地作用域绑定名称
-      let imported = ModuleExportName::new_identifier_name(SPAN, name, self);
-      let local = BindingIdentifier::new(SPAN, name, self);
-      // 同名导入（无 as 别名）时 imported 传 None，代码生成自动复用 local 名称
-      ImportDeclarationSpecifier::new_import_specifier(SPAN, imported, local, kind, self)
-    }), self);
+    let specifiers = ArenaVec::from_iter_in(
+      named_imports.iter().map(|item| {
+        let (name, kind) = match item {
+          NamedImportItem::Value(name) => (*name, ImportOrExportKind::Value),
+          NamedImportItem::Type(name) => (*name, ImportOrExportKind::Type),
+        };
+        // 本地作用域绑定名称
+        let imported = ModuleExportName::new_identifier_name(SPAN, name, self);
+        let local = BindingIdentifier::new(SPAN, name, self);
+        // 同名导入（无 as 别名）时 imported 传 None，代码生成自动复用 local 名称
+        ImportDeclarationSpecifier::new_import_specifier(SPAN, imported, local, kind, self)
+      }),
+      self,
+    );
 
     let statement = Statement::new_import_declaration(
       SPAN,
@@ -299,12 +329,8 @@ impl<'a> ScriptAst<'a> {
     let empty_array_argument = self.new_argument_empty_array();
 
     let ident_ref = TSTypeName::new_identifier_reference(SPAN, type_name, self);
-    let ts_type = TSType::new_ts_type_reference(
-      SPAN,
-      ident_ref,
-      None::<TSTypeParameterInstantiation>,
-      self
-    );
+    let ts_type =
+      TSType::new_ts_type_reference(SPAN, ident_ref, None::<TSTypeParameterInstantiation>, self);
     let ts_array_type = TSType::new_ts_array_type(SPAN, ts_type, self);
 
     let init_expr = self.call_ref(ts_array_type, empty_array_argument);
@@ -314,16 +340,13 @@ impl<'a> ScriptAst<'a> {
 
   fn call_ref(&mut self, ts_type: TSType<'a>, argument: Argument<'a>) -> Expression<'a> {
     // 调用 ref 函数
-    let ref_expr = Expression::new_identifier(
-      SPAN,
-      "ref",
-      self
-    );
+    let ref_expr = Expression::new_identifier(SPAN, "ref", self);
 
     let input_arguments = ArenaVec::from_value_in(argument, self);
     // 函数的泛型参数
     let type_parameters = ArenaVec::from_value_in(ts_type, self);
-    let type_parameters_instantiation = TSTypeParameterInstantiation::new(SPAN, type_parameters, self);
+    let type_parameters_instantiation =
+      TSTypeParameterInstantiation::new(SPAN, type_parameters, self);
 
     // 组装完整表达式
     Expression::new_call_expression(
@@ -375,14 +398,20 @@ impl<'a> ScriptAst<'a> {
     let object_expr = Expression::new_identifier(SPAN, name, self);
 
     let method_name_ident = IdentifierName::new(SPAN, "value", self);
-    let left_target = AssignmentTarget::new_static_member_expression(SPAN, object_expr, method_name_ident, false, self);
+    let left_target = AssignmentTarget::new_static_member_expression(
+      SPAN,
+      object_expr,
+      method_name_ident,
+      false,
+      self,
+    );
 
     let expression = Expression::new_assignment_expression(
       SPAN,
       AssignmentOperator::Assign,
       left_target,
       value,
-      self
+      self,
     );
 
     Statement::new_expression_statement(SPAN, expression, self)
@@ -455,16 +484,11 @@ impl<'a> ScriptAst<'a> {
     method_name: &'a str,
     args: impl IntoIterator<Item = Argument<'a>>,
   ) -> Expression<'a> {
-    let object_expr =  Expression::new_identifier(SPAN, object_name, self);
+    let object_expr = Expression::new_identifier(SPAN, object_name, self);
     let method_name_ident = IdentifierName::new(SPAN, method_name, self);
 
-    let callee = Expression::new_static_member_expression(
-      SPAN,
-      object_expr,
-      method_name_ident,
-      false,
-      self
-    );
+    let callee =
+      Expression::new_static_member_expression(SPAN, object_expr, method_name_ident, false, self);
 
     Expression::new_call_expression(
       SPAN,
@@ -505,12 +529,8 @@ impl<'a> ScriptAst<'a> {
       self,
     );
 
-    let obj_pattern = BindingPattern::new_object_pattern(
-      SPAN,
-      props,
-      None::<BindingRestElement>,
-      self,
-    );
+    let obj_pattern =
+      BindingPattern::new_object_pattern(SPAN, props, None::<BindingRestElement>, self);
 
     let call_args = ArenaVec::from_iter_in(
       dict_names
@@ -637,7 +657,7 @@ impl<'a> ScriptAst<'a> {
     );
 
     let body = TSInterfaceBody::new(SPAN, ArenaVec::from_iter_in(properties, self), self);
-    let interface_declaration =Declaration::new_ts_interface_declaration(
+    let interface_declaration = Declaration::new_ts_interface_declaration(
       SPAN,
       bind_ident,
       None::<TSTypeParameterDeclaration>,
@@ -704,7 +724,11 @@ impl<'a> ScriptAst<'a> {
   //endregion
 
   //region request
-  pub fn new_call_request_get_expression(&self, url: &'a str, config: &[&'a str]) -> Expression<'a> {
+  pub fn new_call_request_get_expression(
+    &self,
+    url: &'a str,
+    config: &[&'a str],
+  ) -> Expression<'a> {
     let url_arg = self.parse_url(url);
 
     let mut args = ArenaVec::new_in(self);
@@ -807,7 +831,11 @@ impl<'a> ScriptAst<'a> {
   //endregion
 
   //region type alias
-  pub fn add_generic_type_alias(&mut self, alias: &'a str, type_names: &[&'a str]) -> Statement<'a> {
+  pub fn add_generic_type_alias(
+    &mut self,
+    alias: &'a str,
+    type_names: &[&'a str],
+  ) -> Statement<'a> {
     let current_type = self.new_generic_type(type_names);
     Statement::new_ts_type_alias_declaration(
       SPAN,
@@ -838,7 +866,7 @@ impl<'a> ScriptAst<'a> {
         SPAN,
         TSTypeName::new_identifier_reference(SPAN, *last_type_name, self),
         None::<TSTypeParameterInstantiation>,
-        self
+        self,
       )
     };
 
@@ -848,7 +876,7 @@ impl<'a> ScriptAst<'a> {
       let type_params = TSTypeParameterInstantiation::boxed(
         SPAN,
         ArenaVec::from_value_in(current_type, self),
-        self
+        self,
       );
       current_type = TSType::new_ts_type_reference(SPAN, outer_ts_name, Some(type_params), self);
     }
@@ -860,24 +888,24 @@ impl<'a> ScriptAst<'a> {
     &self,
     try_statements: impl IntoIterator<Item = Statement<'a>>,
     catch_statements: impl IntoIterator<Item = Statement<'a>>,
-    finally_statements: impl IntoIterator<Item = Statement<'a>>
+    finally_statements: impl IntoIterator<Item = Statement<'a>>,
   ) -> Statement<'a> {
-    self.new_try_statement(try_statements, Some(catch_statements), Some(finally_statements))
+    self.new_try_statement(
+      try_statements,
+      Some(catch_statements),
+      Some(finally_statements),
+    )
   }
 
   fn new_try_statement(
     &self,
     try_statements: impl IntoIterator<Item = Statement<'a>>,
     catch_statements: Option<impl IntoIterator<Item = Statement<'a>>>,
-    finally_statements: Option<impl IntoIterator<Item = Statement<'a>>>
-  ) -> Statement<'a>  {
+    finally_statements: Option<impl IntoIterator<Item = Statement<'a>>>,
+  ) -> Statement<'a> {
     // try block
     let try_body_vec = ArenaVec::from_iter_in(try_statements, self);
-    let try_body = BlockStatement::new(
-      SPAN,
-      try_body_vec,
-      self
-    );
+    let try_body = BlockStatement::new(SPAN, try_body_vec, self);
     let try_body_box = ArenaBox::new_in(try_body, self);
 
     // catch clause
@@ -885,21 +913,17 @@ impl<'a> ScriptAst<'a> {
       SPAN,
       BindingPattern::BindingIdentifier(BindingIdentifier::boxed(SPAN, "e", self)),
       None::<TSTypeAnnotation>,
-      self
+      self,
     );
 
     let catch_clause_option = if let Some(catch_statements) = catch_statements {
       let catch_body_vec = ArenaVec::from_iter_in(catch_statements, self);
-      let catch_body = BlockStatement::new(
-        SPAN,
-        catch_body_vec,
-        self,
-      );
+      let catch_body = BlockStatement::new(SPAN, catch_body_vec, self);
       Some(CatchClause::new(
         SPAN,
         Some(catch_parameter),
         ArenaBox::new_in(catch_body, self),
-        self
+        self,
       ))
     } else {
       None
@@ -908,11 +932,7 @@ impl<'a> ScriptAst<'a> {
     // finally block
     let finally_body_option = if let Some(finally_statements) = finally_statements {
       let finally_body_vec = ArenaVec::from_iter_in(finally_statements, self);
-      let finally_body = BlockStatement::new(
-        SPAN,
-        finally_body_vec,
-        self,
-      );
+      let finally_body = BlockStatement::new(SPAN, finally_body_vec, self);
       Some(ArenaBox::new_in(finally_body, self))
     } else {
       None
@@ -924,12 +944,17 @@ impl<'a> ScriptAst<'a> {
       try_body_box,
       catch_clause_option,
       finally_body_option,
-      self
+      self,
     )
   }
 
   #[inline]
-  fn new_compare_identifier_string_expression(&self, identifier_name: &'a str, value: &'a str, operator: BinaryOperator) -> Expression<'a> {
+  fn new_compare_identifier_string_expression(
+    &self,
+    identifier_name: &'a str,
+    value: &'a str,
+    operator: BinaryOperator,
+  ) -> Expression<'a> {
     Expression::new_binary_expression(
       SPAN,
       Expression::new_identifier(SPAN, identifier_name, self),
@@ -940,7 +965,12 @@ impl<'a> ScriptAst<'a> {
   }
 
   #[inline]
-  fn new_compare_identifier_decimal_expression(&self, identifier_name: &'a str, value: i64, operator: BinaryOperator) -> Expression<'a> {
+  fn new_compare_identifier_decimal_expression(
+    &self,
+    identifier_name: &'a str,
+    value: i64,
+    operator: BinaryOperator,
+  ) -> Expression<'a> {
     Expression::new_binary_expression(
       SPAN,
       Expression::new_identifier(SPAN, identifier_name, self),
@@ -951,7 +981,12 @@ impl<'a> ScriptAst<'a> {
   }
 
   #[inline]
-  fn new_compare_identifier_float_expression(&self, identifier_name: &'a str, value: f64, operator: BinaryOperator) -> Expression<'a> {
+  fn new_compare_identifier_float_expression(
+    &self,
+    identifier_name: &'a str,
+    value: f64,
+    operator: BinaryOperator,
+  ) -> Expression<'a> {
     Expression::new_binary_expression(
       SPAN,
       Expression::new_identifier(SPAN, identifier_name, self),
@@ -962,7 +997,12 @@ impl<'a> ScriptAst<'a> {
   }
 
   #[inline]
-  fn new_compare_identifier_boolean_expression(&self, identifier_name: &'a str, value: bool, operator: BinaryOperator) -> Expression<'a> {
+  fn new_compare_identifier_boolean_expression(
+    &self,
+    identifier_name: &'a str,
+    value: bool,
+    operator: BinaryOperator,
+  ) -> Expression<'a> {
     if value {
       Expression::new_identifier(SPAN, identifier_name, self)
     } else {
@@ -978,7 +1018,11 @@ impl<'a> ScriptAst<'a> {
   //endregion
 
   //region
-  fn new_if_statement(&self, test: Expression<'a>, if_body_statements: impl IntoIterator<Item = Statement<'a>>) -> Statement<'a> {
+  fn new_if_statement(
+    &self,
+    test: Expression<'a>,
+    if_body_statements: impl IntoIterator<Item = Statement<'a>>,
+  ) -> Statement<'a> {
     let if_body_vec = ArenaVec::from_iter_in(if_body_statements, self);
 
     Statement::new_if_statement(
@@ -986,7 +1030,7 @@ impl<'a> ScriptAst<'a> {
       test,
       Statement::new_block_statement(SPAN, if_body_vec, self),
       None,
-      self
+      self,
     )
   }
 
@@ -994,7 +1038,7 @@ impl<'a> ScriptAst<'a> {
     &self,
     test: Expression<'a>,
     if_body_statements: impl IntoIterator<Item = Statement<'a>>,
-    else_body_statements: impl IntoIterator<Item = Statement<'a>>
+    else_body_statements: impl IntoIterator<Item = Statement<'a>>,
   ) -> Statement<'a> {
     let if_body_vec = ArenaVec::from_iter_in(if_body_statements, self);
     let else_body_vec = ArenaVec::from_iter_in(else_body_statements, self);
@@ -1004,7 +1048,7 @@ impl<'a> ScriptAst<'a> {
       test,
       Statement::new_block_statement(SPAN, if_body_vec, self),
       Some(Statement::new_block_statement(SPAN, else_body_vec, self)),
-      self
+      self,
     )
   }
 
@@ -1012,7 +1056,7 @@ impl<'a> ScriptAst<'a> {
     &self,
     test: Expression<'a>,
     if_body_statements: impl IntoIterator<Item = Statement<'a>>,
-    else_if_statement: Statement<'a>
+    else_if_statement: Statement<'a>,
   ) -> Statement<'a> {
     let if_body_vec = ArenaVec::from_iter_in(if_body_statements, self);
 
@@ -1021,7 +1065,7 @@ impl<'a> ScriptAst<'a> {
       test,
       Statement::new_block_statement(SPAN, if_body_vec, self),
       Some(else_if_statement),
-      self
+      self,
     )
   }
   //endregion
@@ -1037,7 +1081,7 @@ impl<'a> ScriptAst<'a> {
     self.statements.push(statement);
   }
 
-  pub fn to_code(self) -> String {
+  pub fn get_code(self) -> String {
     let program = Program::new(
       SPAN,
       SourceType::ts(),
@@ -1048,15 +1092,17 @@ impl<'a> ScriptAst<'a> {
       self.statements,
       &self.builder,
     );
-    let codegen_return = Codegen::new().with_options(CodegenOptions {
-      single_quote: false,
-      minify: false,
-      comments: Default::default(),
-      source_map_path: None,
-      indent_char: IndentChar::Space,
-      indent_width: 2,
-      initial_indent: 0,
-    }).build(&program);
+    let codegen_return = Codegen::new()
+      .with_options(CodegenOptions {
+        single_quote: false,
+        minify: false,
+        comments: Default::default(),
+        source_map_path: None,
+        indent_char: IndentChar::Space,
+        indent_width: 2,
+        initial_indent: 0,
+      })
+      .build(&program);
 
     codegen_return.code
   }
@@ -1084,7 +1130,7 @@ mod tests {
   fn test_empty() {
     let allocator = Allocator::new();
     let script_ast = ScriptAst::new(&allocator);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "");
   }
 
@@ -1093,7 +1139,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_import_default("module-a", "a");
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "import a from \"module-a\";\n");
   }
 
@@ -1102,7 +1148,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_import_named_value("source", &["a", "b"]);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "import { a, b } from \"source\";\n");
   }
 
@@ -1111,7 +1157,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_import_named_type("source", &["a", "b"]);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "import type { a, b } from \"source\";\n");
   }
 
@@ -1123,7 +1169,7 @@ mod tests {
       "source",
       &[NamedImportItem::Value("a"), NamedImportItem::Type("b")],
     );
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "import { a, type b } from \"source\";\n");
   }
 
@@ -1132,7 +1178,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_const_string("a", "b");
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "const a = \"b\";\n");
   }
 
@@ -1141,7 +1187,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_const_integer("a", 1);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "const a = 1;\n");
   }
 
@@ -1150,7 +1196,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_const_float("a", 1.2);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "const a = 1.2;\n");
   }
 
@@ -1159,7 +1205,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_const_boolean("a", false);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "const a = false;\n");
   }
 
@@ -1168,7 +1214,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_const_ref_string("a", "");
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "const a = ref<string>(\"\");\n");
   }
 
@@ -1177,7 +1223,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_const_ref_number("a", 0.0);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "const a = ref<number>(0);\n");
   }
 
@@ -1186,7 +1232,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_const_ref_boolean("a", false);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "const a = ref<boolean>(false);\n");
   }
 
@@ -1195,7 +1241,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_const_ref_string_array("a");
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "const a = ref<string[]>([]);\n");
   }
 
@@ -1204,7 +1250,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_const_ref_number_array("a");
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "const a = ref<number[]>([]);\n");
   }
 
@@ -1213,7 +1259,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_const_ref_object_array("a", "UserInfo");
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "const a = ref<UserInfo[]>([]);\n");
   }
 
@@ -1222,7 +1268,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_arrow_function("a", [], []);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "const a = () => {};\n");
   }
 
@@ -1231,7 +1277,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_arrow_async_function("a", [], []);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "const a = async () => {};\n");
   }
 
@@ -1243,9 +1289,9 @@ mod tests {
     script_ast.add_call_console_log([
       script_ast.new_argument_string("a"),
       script_ast.new_argument_decimal(1.0),
-      script_ast.new_argument_boolean(true)
+      script_ast.new_argument_boolean(true),
     ]);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "console.log(\"a\", 1, true);\n");
   }
 
@@ -1254,13 +1300,13 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
 
-    let console_log = script_ast.new_call_console_log([
-      script_ast.new_argument_identifier("b")
-    ]);
-    script_ast.add_arrow_function("a", [
-      script_ast.new_formal_string_parameter("b")
-    ], [console_log]);
-    let actual_code = script_ast.to_code();
+    let console_log = script_ast.new_call_console_log([script_ast.new_argument_identifier("b")]);
+    script_ast.add_arrow_function(
+      "a",
+      [script_ast.new_formal_string_parameter("b")],
+      [console_log],
+    );
+    let actual_code = script_ast.get_code();
     assert_eq!(
       actual_code,
       "const a = (b: string) => {\n  console.log(b);\n};\n"
@@ -1272,7 +1318,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_set_ref_string_value("a", "b");
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "a.value = \"b\";\n");
   }
 
@@ -1281,7 +1327,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_set_ref_decimal_value("a", 1);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "a.value = 1;\n");
   }
 
@@ -1290,7 +1336,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_set_ref_boolean_value("a", true);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "a.value = true;\n");
   }
 
@@ -1306,7 +1352,7 @@ mod tests {
 
     let request_get = script_ast.new_call_request_get_statement("url", &[]);
     script_ast.append_to_root(request_get);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "request.get(\"url\");\n");
   }
 
@@ -1317,7 +1363,7 @@ mod tests {
 
     let request_get = script_ast.new_call_request_get_statement("url", &["params"]);
     script_ast.append_to_root(request_get);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "request.get(\"url\", { params });\n");
   }
 
@@ -1328,7 +1374,7 @@ mod tests {
 
     let request_get = script_ast.new_call_request_get_statement("`base_url/${id}`", &[]);
     script_ast.append_to_root(request_get);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "request.get(`base_url/${id}`);\n");
   }
 
@@ -1338,7 +1384,7 @@ mod tests {
     let mut script_ast = ScriptAst::new(&allocator);
     let request_post = script_ast.new_call_request_post_statement("url", "data");
     script_ast.append_to_root(request_post);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "request.post(\"url\", data);\n");
   }
 
@@ -1348,7 +1394,7 @@ mod tests {
     let mut script_ast = ScriptAst::new(&allocator);
     let request_post = script_ast.new_call_request_post_statement("`url/${var1}`", "data");
     script_ast.append_to_root(request_post);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "request.post(`url/${var1}`, data);\n");
   }
 
@@ -1358,7 +1404,7 @@ mod tests {
     let mut script_ast = ScriptAst::new(&allocator);
     let request_post = script_ast.new_call_request_put_statement("url", "data");
     script_ast.append_to_root(request_post);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "request.put(\"url\", data);\n");
   }
 
@@ -1368,7 +1414,7 @@ mod tests {
     let mut script_ast = ScriptAst::new(&allocator);
     let request_post = script_ast.new_call_request_put_statement("`url/${var1}`", "data");
     script_ast.append_to_root(request_post);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "request.put(`url/${var1}`, data);\n");
   }
 
@@ -1378,7 +1424,7 @@ mod tests {
     let mut script_ast = ScriptAst::new(&allocator);
     let request_post = script_ast.new_call_request_delete_statement("url");
     script_ast.append_to_root(request_post);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "request.delete(\"url\");\n");
   }
 
@@ -1388,7 +1434,7 @@ mod tests {
     let mut script_ast = ScriptAst::new(&allocator);
     let request_post = script_ast.new_call_request_delete_statement("`url/${var1}`");
     script_ast.append_to_root(request_post);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "request.delete(`url/${var1}`);\n");
   }
 
@@ -1405,7 +1451,7 @@ mod tests {
     );
 
     script_ast.append_to_root(statement);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "({\n  param1,\n  param2\n});\n");
   }
 
@@ -1416,7 +1462,7 @@ mod tests {
 
     let statement = script_ast.new_return_statement(None);
     script_ast.append_to_root(statement);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "return;\n");
   }
 
@@ -1427,7 +1473,7 @@ mod tests {
     let str_expr = script_ast.new_expression_string("a");
     let statement = script_ast.new_return_statement(Some(str_expr));
     script_ast.append_to_root(statement);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "return \"a\";\n");
   }
 
@@ -1439,7 +1485,7 @@ mod tests {
     let request_get_expr = script_ast.new_call_request_get_expression("url", &[]);
     let statement = script_ast.new_return_statement(Some(request_get_expr));
     script_ast.append_to_root(statement);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "return request.get(\"url\");\n");
   }
 
@@ -1449,7 +1495,7 @@ mod tests {
     let mut script_ast = ScriptAst::new(&allocator);
     let promise_user_type = script_ast.add_generic_type_alias("NewType", &["Promise", "User"]);
     script_ast.append_to_root(promise_user_type);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "type NewType = Promise<User>;\n");
   }
 
@@ -1459,7 +1505,7 @@ mod tests {
     let mut script_ast = ScriptAst::new(&allocator);
 
     script_ast.add_call_use_dict(&["a", "b"]);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "const { a, b } = useDict(\"a\", \"b\");\n");
   }
 
@@ -1468,13 +1514,17 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
 
-    script_ast.add_interface("TheType", [
-      script_ast.new_interface_property_string("a", true),
-      script_ast.new_interface_property_number("b", true),
-      script_ast.new_interface_property_boolean("c", true),
-    ], &["TheBase1", "TheBase2"]);
+    script_ast.add_interface(
+      "TheType",
+      [
+        script_ast.new_interface_property_string("a", true),
+        script_ast.new_interface_property_number("b", true),
+        script_ast.new_interface_property_boolean("c", true),
+      ],
+      &["TheBase1", "TheBase2"],
+    );
 
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(
       actual_code,
       "export interface TheType extends TheBase1, TheBase2 {\n  a?: string;\n  b?: number;\n  c?: boolean;\n}\n"
@@ -1485,13 +1535,9 @@ mod tests {
   fn test_new_try_catch_finally_statement() {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
-    let statement = script_ast.new_try_catch_finally_statement(
-      [],
-      [],
-      []
-    );
+    let statement = script_ast.new_try_catch_finally_statement([], [], []);
     script_ast.append_to_root(statement);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "try {} catch (e) {} finally {}\n");
   }
 
@@ -1499,13 +1545,10 @@ mod tests {
   fn test_new_try_statement() {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
-    let statement = script_ast.new_try_statement(
-      [],
-      None::<[Statement; 0]>,
-      None::<[Statement; 0]>
-    );
+    let statement =
+      script_ast.new_try_statement([], None::<[Statement; 0]>, None::<[Statement; 0]>);
     script_ast.append_to_root(statement);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "try {}\n");
   }
 
@@ -1513,9 +1556,14 @@ mod tests {
   fn test_new_compare_identifier_string_expression() {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
-    let expression = script_ast.new_compare_identifier_string_expression("a", "b", BinaryOperator::StrictEquality);
-    script_ast.append_to_root(Statement::new_expression_statement(SPAN, expression, &script_ast));
-    let actual_code = script_ast.to_code();
+    let expression =
+      script_ast.new_compare_identifier_string_expression("a", "b", BinaryOperator::StrictEquality);
+    script_ast.append_to_root(Statement::new_expression_statement(
+      SPAN,
+      expression,
+      &script_ast,
+    ));
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "a === \"b\";\n");
   }
 
@@ -1523,9 +1571,17 @@ mod tests {
   fn test_new_compare_identifier_decimal_expression() {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
-    let expression = script_ast.new_compare_identifier_decimal_expression("a", 200, BinaryOperator::StrictEquality);
-    script_ast.append_to_root(Statement::new_expression_statement(SPAN, expression, &script_ast));
-    let actual_code = script_ast.to_code();
+    let expression = script_ast.new_compare_identifier_decimal_expression(
+      "a",
+      200,
+      BinaryOperator::StrictEquality,
+    );
+    script_ast.append_to_root(Statement::new_expression_statement(
+      SPAN,
+      expression,
+      &script_ast,
+    ));
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "a === 200;\n");
   }
 
@@ -1533,9 +1589,17 @@ mod tests {
   fn test_new_compare_identifier_float_expression() {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
-    let expression = script_ast.new_compare_identifier_float_expression("a", 200.1, BinaryOperator::StrictEquality);
-    script_ast.append_to_root(Statement::new_expression_statement(SPAN, expression, &script_ast));
-    let actual_code = script_ast.to_code();
+    let expression = script_ast.new_compare_identifier_float_expression(
+      "a",
+      200.1,
+      BinaryOperator::StrictEquality,
+    );
+    script_ast.append_to_root(Statement::new_expression_statement(
+      SPAN,
+      expression,
+      &script_ast,
+    ));
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "a === 200.1;\n");
   }
 
@@ -1543,9 +1607,17 @@ mod tests {
   fn test_new_compare_identifier_boolean_expression_false() {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
-    let expression = script_ast.new_compare_identifier_boolean_expression("a", false, BinaryOperator::StrictEquality);
-    script_ast.append_to_root(Statement::new_expression_statement(SPAN, expression, &script_ast));
-    let actual_code = script_ast.to_code();
+    let expression = script_ast.new_compare_identifier_boolean_expression(
+      "a",
+      false,
+      BinaryOperator::StrictEquality,
+    );
+    script_ast.append_to_root(Statement::new_expression_statement(
+      SPAN,
+      expression,
+      &script_ast,
+    ));
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "a === false;\n");
   }
 
@@ -1553,9 +1625,17 @@ mod tests {
   fn test_new_compare_identifier_boolean_expression_true() {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
-    let expression = script_ast.new_compare_identifier_boolean_expression("a", true, BinaryOperator::StrictEquality);
-    script_ast.append_to_root(Statement::new_expression_statement(SPAN, expression, &script_ast));
-    let actual_code = script_ast.to_code();
+    let expression = script_ast.new_compare_identifier_boolean_expression(
+      "a",
+      true,
+      BinaryOperator::StrictEquality,
+    );
+    script_ast.append_to_root(Statement::new_expression_statement(
+      SPAN,
+      expression,
+      &script_ast,
+    ));
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "a;\n");
   }
 
@@ -1563,10 +1643,14 @@ mod tests {
   fn test_new_if_statement() {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
-    let test = script_ast.new_compare_identifier_boolean_expression("a", true, BinaryOperator::StrictEquality);
+    let test = script_ast.new_compare_identifier_boolean_expression(
+      "a",
+      true,
+      BinaryOperator::StrictEquality,
+    );
     let statement = script_ast.new_if_statement(test, []);
     script_ast.append_to_root(statement);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "if (a) {}\n");
   }
 
@@ -1574,10 +1658,14 @@ mod tests {
   fn test_new_if_else_statement() {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
-    let test = script_ast.new_compare_identifier_boolean_expression("a", true, BinaryOperator::StrictEquality);
+    let test = script_ast.new_compare_identifier_boolean_expression(
+      "a",
+      true,
+      BinaryOperator::StrictEquality,
+    );
     let statement = script_ast.new_if_else_statement(test, [], []);
     script_ast.append_to_root(statement);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "if (a) {} else {}\n");
   }
 
@@ -1585,12 +1673,20 @@ mod tests {
   fn test_new_if_elseif_statement() {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
-    let test1 = script_ast.new_compare_identifier_boolean_expression("a", true, BinaryOperator::StrictEquality);
-    let test2 = script_ast.new_compare_identifier_boolean_expression("b", true, BinaryOperator::StrictEquality);
+    let test1 = script_ast.new_compare_identifier_boolean_expression(
+      "a",
+      true,
+      BinaryOperator::StrictEquality,
+    );
+    let test2 = script_ast.new_compare_identifier_boolean_expression(
+      "b",
+      true,
+      BinaryOperator::StrictEquality,
+    );
     let last_if_statement = script_ast.new_if_else_statement(test2, [], []);
     let statement = script_ast.new_if_elseif_statement(test1, [], last_if_statement);
     script_ast.append_to_root(statement);
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "if (a) {} else if (b) {} else {}\n");
   }
 
@@ -1600,7 +1696,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_line_comment("我是注释");
-    let actual_code = script_ast.to_code();
+    let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "// 我是注释\n");
   }
 }
