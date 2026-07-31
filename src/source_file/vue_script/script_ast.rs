@@ -1,5 +1,5 @@
 use oxc_allocator::{Allocator, ArenaBox, ArenaVec, GetAllocator, IntoIn,  Vec};
-use oxc_ast::ast::{Argument, ArrayExpression, ArrowFunctionExpression, AssignmentExpression, AssignmentOperator, AssignmentTarget, BindingIdentifier, BindingPattern, BindingProperty, BindingRestElement, BlockStatement, BooleanLiteral, CallExpression, CatchClause, CatchParameter, Declaration, Directive, ExportNamedDeclaration, Expression, ExpressionStatement, FormalParameter, FormalParameterKind, FormalParameterRest, FormalParameters, FunctionBody, IdentifierName, IdentifierReference, ImportDeclaration, ImportDeclarationSpecifier, ImportDefaultSpecifier, ImportOrExportKind, ImportSpecifier, MemberExpression, ModuleExportName, NumberBase, NumericLiteral, ObjectExpression, ObjectPattern, ObjectPropertyKind, Program, PropertyKey, PropertyKind, ReturnStatement, Statement, StaticMemberExpression, StringLiteral, TSArrayType, TSBooleanKeyword, TSInterfaceBody, TSInterfaceDeclaration, TSInterfaceHeritage, TSNumberKeyword, TSPropertySignature, TSSignature, TSStringKeyword, TSType, TSTypeAliasDeclaration, TSTypeAnnotation, TSTypeName, TSTypeParameterDeclaration, TSTypeParameterInstantiation, TSTypeReference, TSUnknownKeyword, TemplateLiteral, TryStatement, VariableDeclaration, VariableDeclarationKind, VariableDeclarator, WithClause};
+use oxc_ast::ast::{Argument, ArrayExpression, ArrowFunctionExpression, AssignmentExpression, AssignmentOperator, AssignmentTarget, BinaryOperator, BindingIdentifier, BindingPattern, BindingProperty, BindingRestElement, BlockStatement, BooleanLiteral, CallExpression, CatchClause, CatchParameter, Declaration, Directive, ExportNamedDeclaration, Expression, ExpressionStatement, FormalParameter, FormalParameterKind, FormalParameterRest, FormalParameters, FunctionBody, IdentifierName, IdentifierReference, IfStatement, ImportDeclaration, ImportDeclarationSpecifier, ImportDefaultSpecifier, ImportOrExportKind, ImportSpecifier, MemberExpression, ModuleExportName, NumberBase, NumericLiteral, ObjectExpression, ObjectPattern, ObjectPropertyKind, Program, PropertyKey, PropertyKind, ReturnStatement, Statement, StaticMemberExpression, StringLiteral, TSArrayType, TSBooleanKeyword, TSInterfaceBody, TSInterfaceDeclaration, TSInterfaceHeritage, TSNumberKeyword, TSPropertySignature, TSSignature, TSStringKeyword, TSType, TSTypeAliasDeclaration, TSTypeAnnotation, TSTypeName, TSTypeParameterDeclaration, TSTypeParameterInstantiation, TSTypeReference, TSUnknownKeyword, TemplateLiteral, TryStatement, UnaryOperator, VariableDeclaration, VariableDeclarationKind, VariableDeclarator, WithClause};
 use oxc_ast::builder::{AstBuilder, GetAstBuilder};
 use oxc_ast::{Comment, CommentContent, CommentKind};
 use oxc_codegen::Codegen;
@@ -1054,6 +1054,104 @@ impl<'a> ScriptAst<'a> {
       self
     )
   }
+
+  fn new_compare_identifier_string_expression(&self, identifier_name: &'a str, value: &'a str, operator: BinaryOperator) -> Expression<'a> {
+    Expression::new_binary_expression(
+      SPAN,
+      Expression::new_identifier(SPAN, identifier_name, self),
+      operator,
+      Expression::new_string_literal(SPAN, value, None, self),
+      self,
+    )
+  }
+  fn new_compare_identifier_decimal_expression(&self, identifier_name: &'a str, value: i64, operator: BinaryOperator) -> Expression<'a> {
+    Expression::new_binary_expression(
+      SPAN,
+      Expression::new_identifier(SPAN, identifier_name, self),
+      operator,
+      Expression::new_numeric_literal(SPAN, value as f64, None, NumberBase::Decimal, self),
+      self,
+    )
+  }
+
+  fn new_compare_identifier_float_expression(&self, identifier_name: &'a str, value: f64, operator: BinaryOperator) -> Expression<'a> {
+    Expression::new_binary_expression(
+      SPAN,
+      Expression::new_identifier(SPAN, identifier_name, self),
+      operator,
+      Expression::new_numeric_literal(SPAN, value, None, NumberBase::Float, self),
+      self,
+    )
+  }
+
+  fn new_compare_identifier_boolean_expression(&self, identifier_name: &'a str, value: bool, operator: BinaryOperator) -> Expression<'a> {
+    if(value) {
+      Expression::new_identifier(SPAN, identifier_name, self)
+    } else {
+      Expression::new_binary_expression(
+        SPAN,
+        Expression::new_identifier(SPAN, identifier_name, self),
+        operator,
+        Expression::new_boolean_literal(SPAN, value, self),
+        self,
+      )
+    }
+  }
+  //endregion
+
+  //region
+  fn new_if_statement(&self, test: Expression<'a>, if_body_statements: impl IntoIterator<Item = Statement<'a>>) -> Statement<'a> {
+    let mut if_body_vec = ArenaVec::new_in(self);
+    if_body_vec.extend(if_body_statements);
+
+    Statement::new_if_statement(
+      SPAN,
+      test,
+      Statement::new_block_statement(SPAN, if_body_vec, self),
+      None,
+      self
+    )
+  }
+
+  fn new_if_else_statement(
+    &self,
+    test: Expression<'a>,
+    if_body_statements: impl IntoIterator<Item = Statement<'a>>,
+    else_body_statements: impl IntoIterator<Item = Statement<'a>>
+  ) -> Statement<'a> {
+    let mut if_body_vec = ArenaVec::new_in(self);
+    if_body_vec.extend(if_body_statements);
+
+    let mut else_body_vec = ArenaVec::new_in(self);
+    else_body_vec.extend(else_body_statements);
+
+    Statement::new_if_statement(
+      SPAN,
+      test,
+      Statement::new_block_statement(SPAN, if_body_vec, self),
+      Some(Statement::new_block_statement(SPAN, else_body_vec, self)),
+      self
+    )
+  }
+
+  fn new_if_elseif_statement(
+    &self,
+    test: Expression<'a>,
+    if_body_statements: impl IntoIterator<Item = Statement<'a>>,
+    else_if_statement: Statement<'a>
+  ) -> Statement<'a> {
+    let mut if_body_vec = ArenaVec::new_in(self);
+    if_body_vec.extend(if_body_statements);
+
+
+    Statement::new_if_statement(
+      SPAN,
+      test,
+      Statement::new_block_statement(SPAN, if_body_vec, self),
+      Some(else_if_statement),
+      self
+    )
+  }
   //endregion
 
   //region 注释
@@ -1541,6 +1639,91 @@ mod tests {
     script_ast.append(statement);
     let actual_code = script_ast.to_code();
     assert_eq!(actual_code, "try {}\n");
+  }
+
+  #[test]
+  fn test_new_compare_identifier_string_expression() {
+    let allocator = Allocator::new();
+    let mut script_ast = ScriptAst::new(&allocator);
+    let expression = script_ast.new_compare_identifier_string_expression("a", "b", BinaryOperator::StrictEquality);
+    script_ast.append(Statement::new_expression_statement(SPAN, expression, &script_ast));
+    let actual_code = script_ast.to_code();
+    assert_eq!(actual_code, "a === \"b\";\n");
+  }
+
+  #[test]
+  fn test_new_compare_identifier_decimal_expression() {
+    let allocator = Allocator::new();
+    let mut script_ast = ScriptAst::new(&allocator);
+    let expression = script_ast.new_compare_identifier_decimal_expression("a", 200, BinaryOperator::StrictEquality);
+    script_ast.append(Statement::new_expression_statement(SPAN, expression, &script_ast));
+    let actual_code = script_ast.to_code();
+    assert_eq!(actual_code, "a === 200;\n");
+  }
+
+  #[test]
+  fn test_new_compare_identifier_float_expression() {
+    let allocator = Allocator::new();
+    let mut script_ast = ScriptAst::new(&allocator);
+    let expression = script_ast.new_compare_identifier_float_expression("a", 200.1, BinaryOperator::StrictEquality);
+    script_ast.append(Statement::new_expression_statement(SPAN, expression, &script_ast));
+    let actual_code = script_ast.to_code();
+    assert_eq!(actual_code, "a === 200.1;\n");
+  }
+
+  #[test]
+  fn test_new_compare_identifier_boolean_expression_false() {
+    let allocator = Allocator::new();
+    let mut script_ast = ScriptAst::new(&allocator);
+    let expression = script_ast.new_compare_identifier_boolean_expression("a", false, BinaryOperator::StrictEquality);
+    script_ast.append(Statement::new_expression_statement(SPAN, expression, &script_ast));
+    let actual_code = script_ast.to_code();
+    assert_eq!(actual_code, "a === false;\n");
+  }
+
+  #[test]
+  fn test_new_compare_identifier_boolean_expression_true() {
+    let allocator = Allocator::new();
+    let mut script_ast = ScriptAst::new(&allocator);
+    let expression = script_ast.new_compare_identifier_boolean_expression("a", true, BinaryOperator::StrictEquality);
+    script_ast.append(Statement::new_expression_statement(SPAN, expression, &script_ast));
+    let actual_code = script_ast.to_code();
+    assert_eq!(actual_code, "a;\n");
+  }
+
+  #[test]
+  fn test_new_if_statement() {
+    let allocator = Allocator::new();
+    let mut script_ast = ScriptAst::new(&allocator);
+    let test = script_ast.new_compare_identifier_boolean_expression("a", true, BinaryOperator::StrictEquality);
+    let statement = script_ast.new_if_statement(test, []);
+    script_ast.append(statement);
+    let actual_code = script_ast.to_code();
+    assert_eq!(actual_code, "if (a) {}\n");
+  }
+
+  #[test]
+  fn test_new_if_else_statement() {
+    let allocator = Allocator::new();
+    let mut script_ast = ScriptAst::new(&allocator);
+    let test = script_ast.new_compare_identifier_boolean_expression("a", true, BinaryOperator::StrictEquality);
+    let statement = script_ast.new_if_else_statement(test, [], []);
+    script_ast.append(statement);
+    let actual_code = script_ast.to_code();
+    assert_eq!(actual_code, "if (a) {} else {}\n");
+  }
+
+  #[test]
+  fn test_new_if_elseif_statement() {
+    let allocator = Allocator::new();
+    let mut script_ast = ScriptAst::new(&allocator);
+    let test1 = script_ast.new_compare_identifier_boolean_expression("a", true, BinaryOperator::StrictEquality);
+    let test2 = script_ast.new_compare_identifier_boolean_expression("b", true, BinaryOperator::StrictEquality);
+    let last_if_statement = script_ast.new_if_else_statement(test2, [], []);
+    let statement = script_ast.new_if_elseif_statement(test1, [], last_if_statement);
+    script_ast.append(statement);
+    let actual_code = script_ast.to_code();
+    assert_eq!(actual_code, "if (a) {} else if (b) {} else {}\n");
   }
 
   #[test]
