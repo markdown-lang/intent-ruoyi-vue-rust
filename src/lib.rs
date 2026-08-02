@@ -9,6 +9,8 @@ mod source_file;
 mod types;
 mod ui_types;
 mod vue_script;
+mod ts_type;
+mod db_types;
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;

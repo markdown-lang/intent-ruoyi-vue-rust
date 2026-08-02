@@ -1,4 +1,4 @@
-use crate::source_file::vue_script::script_ast::ScriptAst;
+use crate::source_file::script_ast::ScriptAst;
 use crate::ui_types::UIPage;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;

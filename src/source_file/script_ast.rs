@@ -721,6 +721,69 @@ impl<'a> ScriptAst<'a> {
       self,
     )
   }
+
+  /// 引用外部类型
+  pub fn new_interface_property_type(&self, name: &'a str, type_name: &'a str, optional: bool) -> TSSignature<'a> {
+    let ident_ref = TSTypeName::new_identifier_reference(SPAN, type_name, self);
+    let ts_type = TSType::new_ts_type_reference(SPAN, ident_ref, None::<TSTypeParameterInstantiation>, self);
+
+    TSSignature::new_ts_property_signature(
+      SPAN,
+      false,
+      optional,
+      false,
+      PropertyKey::new_identifier(SPAN, name, self),
+      Some(TSTypeAnnotation::boxed(SPAN, ts_type, self)),
+      self,
+    )
+  }
+
+  pub fn new_interface_property_array_type(&self, name: &'a str, type_name: &'a str, optional: bool) -> TSSignature<'a> {
+    let ident_ref = TSTypeName::new_identifier_reference(SPAN, type_name, self);
+    let ts_type = TSType::new_ts_type_reference(SPAN, ident_ref, None::<TSTypeParameterInstantiation>, self);
+    let ts_array_type = TSType::new_ts_array_type(SPAN, ts_type, self);
+
+    TSSignature::new_ts_property_signature(
+      SPAN,
+      false,
+      optional,
+      false,
+      PropertyKey::new_identifier(SPAN, name, self),
+      Some(TSTypeAnnotation::boxed(SPAN, ts_array_type, self)),
+      self,
+    )
+  }
+
+  pub fn new_interface_property_any(&self, name: &'a str, optional: bool) -> TSSignature<'a> {
+    let ts_type = TSType::new_ts_any_keyword(SPAN, self);
+    TSSignature::new_ts_property_signature(
+      SPAN,
+      false,
+      optional,
+      false,
+      PropertyKey::new_identifier(SPAN, name, self),
+      Some(TSTypeAnnotation::boxed(SPAN, ts_type, self)),
+      self,
+    )
+  }
+
+  /// 内部嵌套类型
+  pub fn new_interface_property_type_literal(&self, name: &'a str, members: impl IntoIterator<Item = TSSignature<'a>>, optional: bool) -> TSSignature<'a> {
+    let ts_type = TSType::new_ts_type_literal(
+      SPAN,
+      ArenaVec::from_iter_in(members, self),
+      self,
+    );
+    TSSignature::new_ts_property_signature(
+      SPAN,
+      false,
+      optional,
+      false,
+      PropertyKey::new_identifier(SPAN, name, self),
+      Some(TSTypeAnnotation::boxed(SPAN, ts_type, self)),
+      self,
+    )
+  }
   //endregion
 
   //region request
@@ -1520,6 +1583,7 @@ mod tests {
         script_ast.new_interface_property_string("a", true),
         script_ast.new_interface_property_number("b", true),
         script_ast.new_interface_property_boolean("c", true),
+        script_ast.new_interface_property_any("d", true),
       ],
       &["TheBase1", "TheBase2"],
     );
@@ -1527,7 +1591,7 @@ mod tests {
     let actual_code = script_ast.get_code();
     assert_eq!(
       actual_code,
-      "export interface TheType extends TheBase1, TheBase2 {\n  a?: string;\n  b?: number;\n  c?: boolean;\n}\n"
+      "export interface TheType extends TheBase1, TheBase2 {\n  a?: string;\n  b?: number;\n  c?: boolean;\n  d?: any;\n}\n"
     );
   }
 
