@@ -1,14 +1,5 @@
-use oxc_allocator::{Allocator, ArenaBox, ArenaVec, GetAllocator};
-use oxc_ast::ast::{
-  Argument, AssignmentOperator, AssignmentTarget, BinaryOperator, BindingIdentifier,
-  BindingPattern, BindingProperty, BindingRestElement, BlockStatement, CatchClause, CatchParameter,
-  Declaration, Directive, Expression, FormalParameter, FormalParameterKind, FormalParameterRest,
-  FormalParameters, FunctionBody, IdentifierName, ImportDeclarationSpecifier, ImportOrExportKind,
-  ModuleExportName, NumberBase, ObjectExpression, ObjectPropertyKind, Program, PropertyKey,
-  PropertyKind, Statement, StringLiteral, TSInterfaceBody, TSInterfaceHeritage, TSSignature,
-  TSType, TSTypeAnnotation, TSTypeName, TSTypeParameterDeclaration, TSTypeParameterInstantiation,
-  VariableDeclarationKind, VariableDeclarator, WithClause,
-};
+use oxc_allocator::{Allocator, ArenaBox, ArenaVec, CloneIn, GetAllocator};
+use oxc_ast::ast::{Argument, ArrowFunctionBody, AssignmentOperator, AssignmentTarget, BinaryOperator, BindingIdentifier, BindingPattern, BindingProperty, BindingRestElement, BlockStatement, CatchClause, CatchParameter, Declaration, Directive, ExportNamedDeclaration, ExportSpecifier, Expression, FormalParameter, FormalParameterKind, FormalParameterRest, FormalParameters, Function, FunctionBody, FunctionType, IdentifierName, ImportDeclarationSpecifier, ImportOrExportKind, ModuleExportName, NumberBase, ObjectExpression, ObjectPropertyKind, Program, PropertyKey, PropertyKind, ReturnStatement, Statement, StringLiteral, TSInterfaceBody, TSInterfaceHeritage, TSSignature, TSType, TSTypeAnnotation, TSTypeName, TSTypeParameterDeclaration, TSTypeParameterInstantiation, VariableDeclarationKind, VariableDeclarator, WithClause};
 use oxc_ast::builder::{AstBuilder, GetAstBuilder};
 use oxc_ast::{Comment, CommentKind};
 use oxc_codegen::{Codegen, CodegenOptions, IndentChar};
@@ -76,7 +67,7 @@ impl<'a> ScriptAst<'a> {
       Some(specifiers),
       source_literal,
       None,
-      None::<WithClause<'a>>,
+      None,
       ImportOrExportKind::Value,
       self,
     );
@@ -115,7 +106,7 @@ impl<'a> ScriptAst<'a> {
       Some(specifiers),
       source_literal,
       None,
-      None::<WithClause<'a>>,
+      None,
       ImportOrExportKind::Value,
       self,
     );
@@ -154,7 +145,7 @@ impl<'a> ScriptAst<'a> {
       Some(specifiers),
       source_literal,
       None,
-      None::<WithClause<'a>>,
+      None,
       ImportOrExportKind::Type,
       self,
     );
@@ -191,7 +182,7 @@ impl<'a> ScriptAst<'a> {
       Some(specifiers),
       source_literal,
       None,
-      None::<WithClause<'a>>,
+      None,
       // 混合导入顶层必须为 Value，type 修饰由单个 specifier 控制
       ImportOrExportKind::Value,
       self,
@@ -329,8 +320,12 @@ impl<'a> ScriptAst<'a> {
     let empty_array_argument = self.new_argument_empty_array();
 
     let ident_ref = TSTypeName::new_identifier_reference(SPAN, type_name, self);
-    let ts_type =
-      TSType::new_ts_type_reference(SPAN, ident_ref, None::<TSTypeParameterInstantiation>, self);
+    let ts_type = TSType::new_ts_type_reference(
+      SPAN,
+      ident_ref,
+      None,
+      self
+    );
     let ts_array_type = TSType::new_ts_array_type(SPAN, ts_type, self);
 
     let init_expr = self.call_ref(ts_array_type, empty_array_argument);
@@ -345,8 +340,11 @@ impl<'a> ScriptAst<'a> {
     let input_arguments = ArenaVec::from_value_in(argument, self);
     // 函数的泛型参数
     let type_parameters = ArenaVec::from_value_in(ts_type, self);
-    let type_parameters_instantiation =
-      TSTypeParameterInstantiation::new(SPAN, type_parameters, self);
+    let type_parameters_instantiation = TSTypeParameterInstantiation::boxed(
+      SPAN,
+      type_parameters,
+      self
+    );
 
     // 组装完整表达式
     Expression::new_call_expression(
@@ -379,7 +377,7 @@ impl<'a> ScriptAst<'a> {
       SPAN,
       kind,
       id,
-      None::<TSTypeAnnotation<'a>>,
+      None,
       Some(init_expr),
       false,
       self,
@@ -459,7 +457,7 @@ impl<'a> ScriptAst<'a> {
       ArenaVec::new_in(self),
       pattern,
       Some(ts_type_anno),
-      None::<Expression>,
+      None,
       false,
       None,
       false,
@@ -467,6 +465,52 @@ impl<'a> ScriptAst<'a> {
       self,
     )
   }
+
+  pub fn new_formal_number_parameter(&self, name: &'a str) -> FormalParameter<'a> {
+    let pattern = BindingPattern::new_binding_identifier(SPAN, name, self);
+
+    let ts_type = TSType::new_ts_number_keyword(SPAN, self);
+    let ts_type_anno = TSTypeAnnotation::boxed(SPAN, ts_type, self);
+
+    FormalParameter::new(
+      SPAN,
+      ArenaVec::new_in(self),
+      pattern,
+      Some(ts_type_anno),
+      None,
+      false,
+      None,
+      false,
+      false,
+      self,
+    )
+  }
+
+  pub fn new_formal_type_parameter(&self, param_name: &'a str, type_name: &'a str) -> FormalParameter<'a> {
+    let pattern = BindingPattern::new_binding_identifier(SPAN, param_name, self);
+
+    let ts_type = TSType::new_ts_type_reference(
+      SPAN,
+      TSTypeName::new_identifier_reference(SPAN, type_name, self),
+      None,
+      self,
+    );
+    let ts_type_anno = TSTypeAnnotation::boxed(SPAN, ts_type, self);
+
+    FormalParameter::new(
+      SPAN,
+      ArenaVec::new_in(self),
+      pattern,
+      Some(ts_type_anno),
+      None,
+      false,
+      None,
+      false,
+      false,
+      self,
+    )
+  }
+
 
   fn new_call_object_method_statement(
     &self,
@@ -493,7 +537,7 @@ impl<'a> ScriptAst<'a> {
     Expression::new_call_expression(
       SPAN,
       callee,
-      None::<TSTypeParameterInstantiation>,
+      None,
       ArenaVec::from_iter_in(args, self),
       false,
       self,
@@ -530,7 +574,7 @@ impl<'a> ScriptAst<'a> {
     );
 
     let obj_pattern =
-      BindingPattern::new_object_pattern(SPAN, props, None::<BindingRestElement>, self);
+      BindingPattern::new_object_pattern(SPAN, props, None, self);
 
     let call_args = ArenaVec::from_iter_in(
       dict_names
@@ -544,7 +588,7 @@ impl<'a> ScriptAst<'a> {
     let expression = Expression::new_call_expression(
       SPAN,
       callee,
-      None::<TSTypeParameterInstantiation>,
+      None,
       call_args,
       false,
       self,
@@ -556,7 +600,7 @@ impl<'a> ScriptAst<'a> {
       SPAN,
       kind,
       obj_pattern,
-      None::<TSTypeAnnotation<'a>>,
+      None,
       Some(expression),
       false,
       self,
@@ -578,11 +622,11 @@ impl<'a> ScriptAst<'a> {
       SPAN,
       FormalParameterKind::ArrowFormalParameters,
       ArenaVec::from_iter_in(params, self),
-      None::<FormalParameterRest>,
+      None,
       self,
     );
 
-    let body = FunctionBody::boxed(
+    let body = ArrowFunctionBody::new_function_body(
       SPAN,
       ArenaVec::new_in(self),
       ArenaVec::from_iter_in(body_statements, self),
@@ -592,10 +636,9 @@ impl<'a> ScriptAst<'a> {
     let init_expr = Expression::new_arrow_function_expression(
       SPAN,
       false,
-      false,
-      None::<TSTypeParameterDeclaration>,
+      None,
       formal_params,
-      None::<TSTypeAnnotation>,
+      None,
       body,
       self,
     );
@@ -613,11 +656,11 @@ impl<'a> ScriptAst<'a> {
       SPAN,
       FormalParameterKind::ArrowFormalParameters,
       ArenaVec::from_iter_in(params, self),
-      None::<FormalParameterRest>,
+      None,
       self,
     );
 
-    let body = FunctionBody::boxed(
+    let body = ArrowFunctionBody::new_function_body(
       SPAN,
       ArenaVec::new_in(self),
       ArenaVec::from_iter_in(body_statements, self),
@@ -626,11 +669,10 @@ impl<'a> ScriptAst<'a> {
 
     let init_expr = Expression::new_arrow_function_expression(
       SPAN,
-      false,
       true,
-      None::<TSTypeParameterDeclaration>,
+      None,
       formal_params,
-      None::<TSTypeAnnotation>,
+      None,
       body,
       self,
     );
@@ -651,29 +693,26 @@ impl<'a> ScriptAst<'a> {
     let extends = ArenaVec::from_iter_in(
       base_type_names.iter().map(|name| {
         let expr = Expression::new_identifier(SPAN, *name, self);
-        TSInterfaceHeritage::new(SPAN, expr, None::<TSTypeParameterInstantiation>, self)
+        TSInterfaceHeritage::new(SPAN, expr, None, self)
       }),
       self,
     );
 
-    let body = TSInterfaceBody::new(SPAN, ArenaVec::from_iter_in(properties, self), self);
+    let body = TSInterfaceBody::boxed(SPAN, ArenaVec::from_iter_in(properties, self), self);
+
     let interface_declaration = Declaration::new_ts_interface_declaration(
       SPAN,
       bind_ident,
-      None::<TSTypeParameterDeclaration>,
+      None,
       extends,
       body,
       false,
       self,
     );
 
-    let statement = Statement::new_export_named_declaration(
+    let statement = Statement::new_export_declaration(
       SPAN,
-      Some(interface_declaration),
-      ArenaVec::new_in(self),
-      None,
-      ImportOrExportKind::Value,
-      None::<WithClause>,
+      interface_declaration,
       self,
     );
 
@@ -725,7 +764,7 @@ impl<'a> ScriptAst<'a> {
   /// 引用外部类型
   pub fn new_interface_property_type(&self, name: &'a str, type_name: &'a str, optional: bool) -> TSSignature<'a> {
     let ident_ref = TSTypeName::new_identifier_reference(SPAN, type_name, self);
-    let ts_type = TSType::new_ts_type_reference(SPAN, ident_ref, None::<TSTypeParameterInstantiation>, self);
+    let ts_type = TSType::new_ts_type_reference(SPAN, ident_ref, None, self);
 
     TSSignature::new_ts_property_signature(
       SPAN,
@@ -740,7 +779,7 @@ impl<'a> ScriptAst<'a> {
 
   pub fn new_interface_property_array_type(&self, name: &'a str, type_name: &'a str, optional: bool) -> TSSignature<'a> {
     let ident_ref = TSTypeName::new_identifier_reference(SPAN, type_name, self);
-    let ts_type = TSType::new_ts_type_reference(SPAN, ident_ref, None::<TSTypeParameterInstantiation>, self);
+    let ts_type = TSType::new_ts_type_reference(SPAN, ident_ref, None, self);
     let ts_array_type = TSType::new_ts_array_type(SPAN, ts_type, self);
 
     TSSignature::new_ts_property_signature(
@@ -800,6 +839,7 @@ impl<'a> ScriptAst<'a> {
     if !config.is_empty() {
       let config_expr = self.boxed_object_expression(config);
       let config_arg = Argument::ObjectExpression(config_expr);
+
       args.push(config_arg);
     }
 
@@ -819,6 +859,15 @@ impl<'a> ScriptAst<'a> {
     }
 
     self.new_call_object_method_statement("request", "get", args)
+  }
+
+  pub fn new_return_request_get_statement(&self, url: &'a str, config: &[&'a str]) -> Statement<'a> {
+    let expression = self.new_call_request_get_expression(url, config);
+    Statement::new_return_statement(
+      SPAN,
+      Some(expression),
+      self
+    )
   }
 
   pub fn new_call_request_post_statement(&self, url: &'a str, data: &'a str) -> Statement<'a> {
@@ -869,6 +918,60 @@ impl<'a> ScriptAst<'a> {
     self.new_call_object_method_statement("request", "delete", args)
   }
 
+  pub fn add_api_function(
+    &mut self,
+    function_name: &'a str,
+    input_params: impl IntoIterator<Item = FormalParameter<'a>>,
+    return_type_names: &[&'a str],
+    body_statements: impl IntoIterator<Item = Statement<'a>>
+  ) {
+    let mut all_return_type_names = ArenaVec::with_capacity_in(return_type_names.len() + 1, self);
+    all_return_type_names.push("Promise");
+    all_return_type_names.extend_from_slice(return_type_names);
+    let return_type = TSTypeAnnotation::boxed(
+      SPAN,
+      self.new_generic_type(all_return_type_names.as_slice()),
+      self,
+    );
+    let body = FunctionBody::boxed(
+      SPAN,
+      ArenaVec::new_in(self),
+      ArenaVec::from_iter_in(body_statements, self),
+      self,
+    );
+
+    let formal_parameters = FormalParameters::boxed(
+      SPAN,
+      FormalParameterKind::FormalParameter,
+      ArenaVec::from_iter_in(input_params, self),
+      None,
+      self,
+    );
+
+    let declaration = Declaration::new_function_declaration(
+      SPAN,
+      FunctionType::FunctionDeclaration,
+      Some(BindingIdentifier::new(SPAN, function_name, self)),
+      false,
+      false,
+      false,
+      None,
+      None,
+      formal_parameters,
+      Some(return_type),
+      Some(body),
+      self,
+    );
+
+    let statement = Statement::new_export_declaration(
+      SPAN,
+      declaration,
+      self,
+    );
+
+    self.append_to_root(statement);
+  }
+
   fn boxed_object_expression(
     &self,
     names: &[&'a str],
@@ -903,7 +1006,7 @@ impl<'a> ScriptAst<'a> {
     Statement::new_ts_type_alias_declaration(
       SPAN,
       BindingIdentifier::new(SPAN, alias, self),
-      None::<TSTypeParameterDeclaration>,
+      None,
       current_type,
       false,
       self,
@@ -928,7 +1031,7 @@ impl<'a> ScriptAst<'a> {
       TSType::new_ts_type_reference(
         SPAN,
         TSTypeName::new_identifier_reference(SPAN, *last_type_name, self),
-        None::<TSTypeParameterInstantiation>,
+        None,
         self,
       )
     };
@@ -975,14 +1078,14 @@ impl<'a> ScriptAst<'a> {
     let catch_parameter = CatchParameter::new(
       SPAN,
       BindingPattern::BindingIdentifier(BindingIdentifier::boxed(SPAN, "e", self)),
-      None::<TSTypeAnnotation>,
+      None,
       self,
     );
 
     let catch_clause_option = if let Some(catch_statements) = catch_statements {
       let catch_body_vec = ArenaVec::from_iter_in(catch_statements, self);
       let catch_body = BlockStatement::new(SPAN, catch_body_vec, self);
-      Some(CatchClause::new(
+      Some(CatchClause::boxed(
         SPAN,
         Some(catch_parameter),
         ArenaBox::new_in(catch_body, self),
@@ -1499,6 +1602,22 @@ mod tests {
     script_ast.append_to_root(request_post);
     let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "request.delete(`url/${var1}`);\n");
+  }
+
+  #[test]
+  fn test_new_api_function() {
+    let allocator = Allocator::new();
+    let mut script_ast = ScriptAst::new(&allocator);
+
+    script_ast.add_api_function(
+      "fetchDataList",
+      [],
+      &[],
+      []
+    );
+
+    let actual_code = script_ast.get_code();
+    assert_eq!(actual_code, "export function fetchDataList(): Promise {}\n");
   }
 
   #[test]
