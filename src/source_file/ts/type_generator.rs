@@ -1,9 +1,8 @@
 use heck::{ToLowerCamelCase, ToUpperCamelCase};
-use oxc_allocator::{Allocator, ArenaVec};
+use oxc_allocator::{Allocator, ArenaVec, GetAllocator};
 use oxc_ast::ast::TSSignature;
-use crate::db_types::{DbTableStructure, QueryParam};
+use crate::db_types::{DbTableStructure, MatchOperation, QueryParam};
 use crate::source_file::script_ast::ScriptAst;
-use crate::ui_types::MatchOperation;
 
 /// 获取 types 源码
 /// ## Parameters
@@ -132,8 +131,7 @@ pub fn get_type_code(
 
 #[cfg(test)]
 mod tests {
-  use crate::db_types::{DbColumn, DbDataType, DbTable, QueryParam};
-  use crate::ui_types::MatchOperation;
+  use crate::db_types::{DbColumn, DbDataType, DbTable, QueryParam, MatchOperation};
   use super::*;
 
   #[test]

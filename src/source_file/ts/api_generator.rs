@@ -33,6 +33,9 @@ impl<'a> TsApiInfo<'a> {
     self.add_import();
     self.add_fetch_data_list_api();
     self.add_fetch_one_data_api();
+    self.add_add_one_data_api();
+    self.add_update_one_data_api();
+    self.add_delete_data_list_api();
 
     self.script_ast.get_code()
   }
@@ -55,20 +58,20 @@ impl<'a> TsApiInfo<'a> {
   }
 
   fn add_fetch_data_list_api(&mut self) {
-    let list_function_name = self.alloc_str(format!("fetch{}List", self.page_key).as_str());
+    let function_name = self.alloc_str(format!("fetch{}List", self.page_key).as_str());
 
-    let list_formal_parameter_type_name = self.alloc_str(format!("{}QueryParams", self.page_key.to_upper_camel_case()).as_str());
-    let list_url = self.alloc_str(format!("/{}/{}/list", self.parent_keys.join("/"), self.page_key.to_lower_camel_case()).as_str());
+    let formal_parameter_type_name = self.alloc_str(format!("{}QueryParams", self.page_key.to_upper_camel_case()).as_str());
+    let url = self.alloc_str(format!("/{}/{}/list", self.parent_keys.join("/"), self.page_key.to_lower_camel_case()).as_str());
 
     self.script_ast.add_api_function(
-      list_function_name,
+      function_name,
       [
-        self.script_ast.new_formal_type_parameter("params", list_formal_parameter_type_name)
+        self.script_ast.new_formal_type_parameter("params", formal_parameter_type_name)
       ],
       &["TableDataInfo", "DemoTable[]"],
       [
         self.script_ast.new_return_request_get_statement(
-          list_url,
+          url,
           &["params"]
         )
       ]
@@ -76,25 +79,88 @@ impl<'a> TsApiInfo<'a> {
   }
 
   fn add_fetch_one_data_api(&mut self) {
-    let list_function_name = self.alloc_str(format!("fetch{}ById", self.page_key).as_str());
+    let function_name = self.alloc_str(format!("fetch{}ById", self.page_key).as_str());
 
-    let list_url = self.alloc_str(format!("`/{}/{}/${{id}}`", self.parent_keys.join("/"), self.page_key.to_lower_camel_case()).as_str());
+    let url = self.alloc_str(format!("`/{}/{}/${{id}}`", self.parent_keys.join("/"), self.page_key.to_lower_camel_case()).as_str());
 
     self.script_ast.add_api_function(
-      list_function_name,
+      function_name,
       [
         self.script_ast.new_formal_number_parameter("id")
       ],
       &["AjaxResult", "DemoTable"],
       [
         self.script_ast.new_return_request_get_statement(
-          list_url,
+          url,
           &[]
         )
       ]
     );
   }
 
+  fn add_add_one_data_api(&mut self) {
+    let function_name = self.alloc_str(format!("add{}", self.page_key).as_str());
+
+    let type_name = self.alloc_str(self.db_table_structure.table.to_entity_class_name().as_str());
+    let url = self.alloc_str(format!("/{}/{}", self.parent_keys.join("/"), self.page_key.to_lower_camel_case()).as_str());
+
+    self.script_ast.add_api_function(
+      function_name,
+      [
+        self.script_ast.new_formal_type_parameter("data", type_name)
+      ],
+      &["AjaxResult"],
+      [
+        self.script_ast.new_return_request_post_statement(
+          url,
+          "data"
+        )
+      ]
+    );
+  }
+
+  fn add_update_one_data_api(&mut self) {
+    let function_name = self.alloc_str(format!("update{}", self.page_key).as_str());
+
+    let type_name = self.alloc_str(self.db_table_structure.table.to_entity_class_name().as_str());
+    let url = self.alloc_str(format!("/{}/{}", self.parent_keys.join("/"), self.page_key.to_lower_camel_case()).as_str());
+
+    self.script_ast.add_api_function(
+      function_name,
+      [
+        self.script_ast.new_formal_type_parameter("data", type_name)
+      ],
+      &["AjaxResult"],
+      [
+        self.script_ast.new_return_request_put_statement(
+          url,
+          "data"
+        )
+      ]
+    );
+  }
+
+  fn add_delete_data_list_api(&mut self) {
+    let function_name = self.alloc_str(format!("delete{}ById", self.page_key).as_str());
+
+    let url = self.alloc_str(format!("`/{}/{}/${{id}}`", self.parent_keys.join("/"), self.page_key.to_lower_camel_case()).as_str());
+
+    self.script_ast.add_api_function(
+      function_name,
+      [
+        self.script_ast.new_formal_union_types_parameter("id", [
+          self.script_ast.new_ts_number_type(),
+          self.script_ast.new_ts_array_number_type()
+        ])
+      ],
+      &["AjaxResult"],
+      [
+        self.script_ast.new_return_request_delete_statement(
+          url,
+        )
+      ]
+    );
+  }
 }
 
 #[cfg(test)]
@@ -130,7 +196,7 @@ mod tests {
     };
 
     let allocator = Allocator::new();
-    let mut ts_api_info = TsApiInfo::new(parent_keys, "Demo".to_string(), table_structure, &allocator);
+    let ts_api_info = TsApiInfo::new(parent_keys, "Demo".to_string(), table_structure, &allocator);
 
     let actual_code = ts_api_info.get_code();
     let expect_code = concat!(
@@ -141,6 +207,15 @@ mod tests {
       "}\n",
       "export function fetchDemoById(id: number): Promise<AjaxResult<DemoTable>> {\n",
       "  return request.get(`/group1/demo/${id}`);\n",
+      "}\n",
+      "export function addDemo(data: DemoTable): Promise<AjaxResult> {\n",
+      "  return request.post(\"/group1/demo\", data);\n",
+      "}\n",
+      "export function updateDemo(data: DemoTable): Promise<AjaxResult> {\n",
+      "  return request.put(\"/group1/demo\", data);\n",
+      "}\n",
+      "export function deleteDemoById(id: number | number[]): Promise<AjaxResult> {\n",
+      "  return request.delete(`/group1/demo/${id}`);\n",
       "}\n",
     );
     assert_eq!(actual_code, expect_code);

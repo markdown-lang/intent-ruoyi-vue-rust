@@ -1,6 +1,10 @@
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
+
+
+
+// 以下代码是 AI 生成，仅供参考
 // ==================== 基础通用类型 ====================
 
 /// 通用数值/字符串联合类型，对应 TS 的 `number | string`

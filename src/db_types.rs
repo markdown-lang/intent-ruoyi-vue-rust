@@ -1,7 +1,6 @@
 use heck::{ToLowerCamelCase, ToUpperCamelCase};
-use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use crate::ui_types::MatchOperation;
+use napi::Either;
 
 /// 数据库表基本信息
 #[napi(object)]
@@ -212,3 +211,116 @@ pub struct QueryParam {
   pub data_type: DbDataType,
   pub operation: MatchOperation
 }
+
+
+//region table 一级的查询条件
+
+#[napi(string_enum)]
+#[derive(PartialEq)]
+pub enum MatchOperation {
+  Contains,
+  Equal,
+  Between,
+  ItemEqual,
+  ItemContains,
+}
+
+#[napi(object)]
+pub struct TableParamItem {
+  /// 属性名，对应实体类的字段名
+  pub property: String,
+  /// 比较操作
+  pub operation: MatchOperation,
+}
+
+#[napi(string_enum="snake_case")]
+pub enum UIParamActionKey {
+  ListQuery,
+  FormReset,
+}
+#[napi(object)]
+pub struct TableParamActionSlot {
+  pub actions: Vec<UIParamActionKey>,
+}
+
+/// 表格一级的参数容器对象
+#[napi(object)]
+pub struct TableParamSlot {
+  /// 参数对象的名称
+  pub name: String,
+  /// 参数列表
+  pub children: Vec<Either<TableParamItem, TableParamActionSlot>>,
+}
+//endregion
+
+//region Form 表单
+#[napi(object)]
+pub struct Form {
+  /// form 表单的名称
+  pub name: String,
+  /// 字段列表
+  pub fields: Vec<FormField>,
+}
+
+#[napi]
+pub enum FormField {
+  TextInput(FormTextInput),
+  NumberInput(FormNumberInput),
+  Textarea(FormTextarea),
+  DatePicker(FormDatePicker),
+  Select(FormSelect),
+}
+
+pub struct FormRuleInfo<'a> {
+  pub property: &'a str,
+  pub label: &'a str,
+  pub required: bool,
+}
+
+impl FormField {
+  pub fn get_rule_info(&self) -> Option<FormRuleInfo<'_>> {
+    match self {
+      FormField::TextInput(f) => {Some(FormRuleInfo {property: f.property.as_str(), label: f.label.as_str(), required: f.required})}
+      FormField::NumberInput(f) => {Some(FormRuleInfo {property: f.property.as_str(), label: f.label.as_str(), required: f.required})}
+      FormField::Textarea(f) => {Some(FormRuleInfo {property: f.property.as_str(), label: f.label.as_str(), required: f.required})}
+      FormField::DatePicker(f) => {Some(FormRuleInfo {property: f.property.as_str(), label: f.label.as_str(), required: f.required})}
+      FormField::Select(f) => {Some(FormRuleInfo {property: f.property.as_str(), label: f.label.as_str(), required: f.required})}
+    }
+  }
+}
+
+#[napi(object)]
+pub struct FormTextInput {
+  pub property: String,
+  pub label: String,
+  pub required: bool,
+}
+
+#[napi(object)]
+pub struct FormNumberInput {
+  pub property: String,
+  pub label: String,
+  pub required: bool,
+}
+
+#[napi(object)]
+pub struct FormTextarea {
+  pub property: String,
+  pub label: String,
+  pub required: bool,
+}
+
+#[napi(object)]
+pub struct FormDatePicker {
+  pub property: String,
+  pub label: String,
+  pub required: bool,
+}
+
+#[napi(object)]
+pub struct FormSelect {
+  pub property: String,
+  pub label: String,
+  pub required: bool,
+}
+//endregion
