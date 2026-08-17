@@ -1,5 +1,6 @@
+use heck::ToUpperCamelCase;
 use oxc_allocator::{Allocator, ArenaBox, ArenaVec, CloneIn, GetAllocator};
-use oxc_ast::ast::{Argument, ArrayExpressionElement, ArrowFunctionBody, AssignmentOperator, AssignmentTarget, BinaryOperator, BindingIdentifier, BindingPattern, BindingProperty, BindingRestElement, BlockStatement, CatchClause, CatchParameter, Declaration, Directive, ExportNamedDeclaration, ExportSpecifier, Expression, FormalParameter, FormalParameterKind, FormalParameterRest, FormalParameters, Function, FunctionBody, FunctionType, IdentifierName, ImportDeclarationSpecifier, ImportOrExportKind, ModuleExportName, NumberBase, ObjectExpression, ObjectProperty, ObjectPropertyKind, Program, PropertyKey, PropertyKind, ReturnStatement, Statement, StringLiteral, TSInterfaceBody, TSInterfaceHeritage, TSSignature, TSType, TSTypeAnnotation, TSTypeName, TSTypeParameterDeclaration, TSTypeParameterInstantiation, TSUnionType, VariableDeclarationKind, VariableDeclarator, WithClause};
+use oxc_ast::ast::{Argument, ArrayExpressionElement, ArrowFunctionBody, AssignmentOperator, AssignmentTarget, BinaryOperator, BindingIdentifier, BindingPattern, BindingProperty, BindingRestElement, BlockStatement, CatchClause, CatchParameter, Declaration, Directive, ExportNamedDeclaration, ExportSpecifier, Expression, FormalParameter, FormalParameterKind, FormalParameterRest, FormalParameters, Function, FunctionBody, FunctionType, IdentifierName, ImportDeclarationSpecifier, ImportOrExportKind, LogicalOperator, ModuleExportName, NumberBase, ObjectExpression, ObjectProperty, ObjectPropertyKind, Program, PropertyKey, PropertyKind, ReturnStatement, Statement, StringLiteral, TSInterfaceBody, TSInterfaceHeritage, TSSignature, TSType, TSTypeAnnotation, TSTypeName, TSTypeParameterDeclaration, TSTypeParameterInstantiation, TSUnionType, VariableDeclarationKind, VariableDeclarator, WithClause};
 use oxc_ast::builder::{AstBuilder, GetAstBuilder};
 use oxc_ast::{Comment, CommentKind};
 use oxc_codegen::{Codegen, CodegenOptions, IndentChar};
@@ -249,7 +250,7 @@ impl<'a> ScriptAst<'a> {
   fn new_expression_array(&self, elements: impl IntoIterator<Item = ArrayExpressionElement<'a>>) -> Expression<'a> {
     Expression::new_array_expression(SPAN, ArenaVec::from_iter_in(elements, self), self)
   }
-  
+
   #[inline]
   fn new_expression_identifier(&self, name: &'a str) -> Expression<'a> {
     Expression::new_identifier(SPAN, name, self)
@@ -567,10 +568,191 @@ impl<'a> ScriptAst<'a> {
     let right_expr = self.new_expression_boolean(value);
     self.new_set_ref_value(name, right_expr)
   }
-  
+
   pub fn new_set_ref_identifier_value(&self, name: &'a str, value: &'a str) -> Statement<'a> {
     let right_expr = self.new_expression_identifier(value);
     self.new_set_ref_value(name, right_expr)
+  }
+
+  pub fn new_clear_ref_object_property(&self, object_name: &'a str, property_key: &'a str) -> Statement<'a> {
+    let object_expr = Expression::new_identifier(SPAN, object_name, self);
+
+    let value_ident = IdentifierName::new(SPAN, "value", self);
+    let object_value_expr = Expression::new_static_member_expression(
+      SPAN,
+      object_expr,
+      value_ident,
+      false,
+      self,
+    );
+
+    let property_key_ident = IdentifierName::new(SPAN, property_key, self);
+
+    let left_target = AssignmentTarget::new_static_member_expression(
+      SPAN,
+      object_value_expr,
+      property_key_ident,
+      false,
+      self,
+    );
+
+    let expression = Expression::new_assignment_expression(
+      SPAN,
+      AssignmentOperator::Assign,
+      left_target,
+      Expression::new_object_expression(
+        SPAN,
+        ArenaVec::new_in(self),
+        self,
+      ),
+      self,
+    );
+
+    Statement::new_expression_statement(SPAN, expression, self)
+  }
+
+  pub fn new_check_ref_value_is_blank(&self, name: &'a str) -> Expression<'a> {
+    let object_expr = Expression::new_identifier(SPAN, name, self);
+    let value_ident = IdentifierName::new(SPAN, "value", self);
+    let object_value_expr = Expression::new_static_member_expression(
+      SPAN,
+      object_expr,
+      value_ident,
+      false,
+      self,
+    );
+
+    let not_null_expr = Expression::new_binary_expression(
+      SPAN,
+      Expression::new_null_literal(SPAN, self),
+      BinaryOperator::Inequality,
+      object_value_expr.clone_in(self.allocator()),
+      self,
+    );
+
+    let not_empty_string_expr = Expression::new_binary_expression(
+      SPAN,
+      Expression::new_string_literal(SPAN, "", None, self),
+      BinaryOperator::Inequality,
+      object_value_expr,
+      self,
+    );
+
+    Expression::new_logical_expression(
+      SPAN,
+      not_null_expr,
+      LogicalOperator::And,
+      not_empty_string_expr,
+      self,
+    )
+  }
+
+  fn new_left_member_assign_target(&self, parts: &[&'a str]) -> AssignmentTarget<'a> {
+    assert!(!parts.is_empty());
+    if parts.len() == 1 {
+      AssignmentTarget::new_assignment_target_identifier(SPAN, parts[0], self)
+    } else {
+      let mut expr = Expression::new_identifier(SPAN, parts[0], self);
+      let middle_parts = &parts[1..parts.len() - 1];
+      for part in middle_parts {
+        let part = *part;
+        if is_computed_member(part) {
+          if let Some(key) = part.strip_prefix('[').and_then(|part| part.strip_suffix(']')) {
+            let prop_expr = if let Ok(num) = key.parse::<f64>() {
+              Expression::new_numeric_literal(SPAN, num, None, NumberBase::Decimal, self)
+            } else {
+              Expression::new_string_literal(SPAN, key, None, self)
+            };
+            expr = Expression::new_computed_member_expression(
+              SPAN,
+              expr,
+              prop_expr,
+              false,
+              self,
+            )
+          }
+        } else {
+          expr = Expression::new_static_member_expression(
+            SPAN,
+            expr,
+            IdentifierName::new(SPAN, part, self),
+            false,
+            self,
+          );
+        }
+      }
+      let last_part = parts[parts.len() - 1];
+      if is_computed_member(last_part) {
+        let key = strip_computed_key(last_part);
+        let prop_expr = if let Ok(num) = key.parse::<f64>() {
+          Expression::new_numeric_literal(SPAN, num, None, NumberBase::Decimal, self)
+        } else {
+          Expression::new_string_literal(SPAN, key, None, self)
+        };
+        AssignmentTarget::new_computed_member_expression(
+          SPAN,
+          expr,
+          prop_expr,
+          false,
+          self,
+        )
+      } else {
+        AssignmentTarget::new_static_member_expression(
+          SPAN,
+          expr,
+          IdentifierName::new(SPAN, last_part, self),
+          false,
+          self,
+        )
+      }
+    }
+  }
+
+  fn new_right_member_expression(&self, parts: &[&'a str]) -> Expression<'a> {
+    assert!(!parts.is_empty());
+    let mut expr = Expression::new_identifier(SPAN, parts[0], self);
+    for part in parts.iter().skip(1) {
+      let part = *part;
+      if is_computed_member(part) {
+        if let Some(key) = part.strip_prefix('[').and_then(|part| part.strip_suffix(']')) {
+          let prop_expr = if let Ok(num) = key.parse::<f64>() {
+            Expression::new_numeric_literal(SPAN, num, None, NumberBase::Decimal, self)
+          } else {
+            Expression::new_string_literal(SPAN, key, None, self)
+          };
+          expr = Expression::new_computed_member_expression(
+            SPAN,
+            expr,
+            prop_expr,
+            false,
+            self,
+          )
+        }
+      } else {
+        expr = Expression::new_static_member_expression(
+          SPAN,
+          expr,
+          IdentifierName::new(SPAN, part, self),
+          false,
+          self,
+        );
+      }
+    }
+
+    expr
+  }
+
+  pub fn new_set_member_value(&self, member_parts: &[&'a str], value_parts: &[&'a str]) -> Statement<'a> {
+    let left_target = self.new_left_member_assign_target(member_parts);
+    let right_expr = self.new_right_member_expression(value_parts);
+    let expression = Expression::new_assignment_expression(
+      SPAN,
+      AssignmentOperator::Assign,
+      left_target,
+      right_expr,
+      self,
+    );
+    Statement::new_expression_statement(SPAN, expression, self)
   }
 
   pub fn add_set_ref_string_value(&mut self, name: &'a str, value: &'a str) {
@@ -587,6 +769,7 @@ impl<'a> ScriptAst<'a> {
     let statement = self.new_set_ref_boolean_value(name, value);
     self.append_to_root(statement);
   }
+
   //endregion
 
   //region arrow function
@@ -1516,8 +1699,8 @@ impl<'a> ScriptAst<'a> {
   }
   //endregion
 
-  //region
-  fn new_if_statement(
+  //region if
+  pub fn new_if_statement(
     &self,
     test: Expression<'a>,
     if_body_statements: impl IntoIterator<Item = Statement<'a>>,
@@ -1533,7 +1716,7 @@ impl<'a> ScriptAst<'a> {
     )
   }
 
-  fn new_if_else_statement(
+  pub fn new_if_else_statement(
     &self,
     test: Expression<'a>,
     if_body_statements: impl IntoIterator<Item = Statement<'a>>,
@@ -1551,7 +1734,7 @@ impl<'a> ScriptAst<'a> {
     )
   }
 
-  fn new_if_elseif_statement(
+  pub fn new_if_elseif_statement(
     &self,
     test: Expression<'a>,
     if_body_statements: impl IntoIterator<Item = Statement<'a>>,
@@ -1578,6 +1761,11 @@ impl<'a> ScriptAst<'a> {
 
   pub fn append_to_root(&mut self, statement: Statement<'a>) {
     self.statements.push(statement);
+  }
+
+  pub fn append_expression_to_root(&mut self, expression: Expression<'a>) {
+    let statement = Statement::new_expression_statement(SPAN, expression, self);
+    self.append_to_root(statement);
   }
 
   pub fn get_code(self) -> String {
@@ -1609,6 +1797,14 @@ impl<'a> ScriptAst<'a> {
 
 fn is_template_string(content: &str) -> bool {
   content.len() >= 2 && content.starts_with("`") && content.ends_with("`")
+}
+
+fn is_computed_member(name: &str) -> bool {
+  name.len() >= 2 && name.starts_with("[") && name.ends_with("]")
+}
+
+fn strip_computed_key(s: &str) -> &str {
+  &s[1..s.len() - 1]
 }
 
 #[cfg(test)]
@@ -1861,6 +2057,56 @@ mod tests {
     script_ast.add_set_ref_boolean_value("a", true);
     let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "a.value = true;\n");
+  }
+
+  #[test]
+  fn test_new_clear_ref_object_property() {
+    let allocator = Allocator::new();
+    let mut script_ast = ScriptAst::new(&allocator);
+    let statement = script_ast.new_clear_ref_object_property("a", "b");
+    script_ast.append_to_root(statement);
+    let actual_code = script_ast.get_code();
+    assert_eq!(actual_code, "a.value.b = {};\n");
+  }
+
+  #[test]
+  fn test_new_check_ref_value_is_blank() {
+    let allocator = Allocator::new();
+    let mut script_ast = ScriptAst::new(&allocator);
+    let expression = script_ast.new_check_ref_value_is_blank("a");
+    script_ast.append_expression_to_root(expression);
+    let actual_code = script_ast.get_code();
+    assert_eq!(actual_code, "null != a.value && \"\" != a.value;\n");
+  }
+
+  #[test]
+  fn test_new_right_member_expression_computed_string() {
+    let allocator = Allocator::new();
+    let mut script_ast = ScriptAst::new(&allocator);
+    let expression = script_ast.new_right_member_expression(&["a", "b", "[c]"]);
+    script_ast.append_expression_to_root(expression);
+    let actual_code = script_ast.get_code();
+    assert_eq!(actual_code, "a.b[\"c\"];\n");
+  }
+
+  #[test]
+  fn test_new_right_member_expression_computed_number() {
+    let allocator = Allocator::new();
+    let mut script_ast = ScriptAst::new(&allocator);
+    let expression = script_ast.new_right_member_expression(&["a", "b", "[0]"]);
+    script_ast.append_expression_to_root(expression);
+    let actual_code = script_ast.get_code();
+    assert_eq!(actual_code, "a.b[0];\n");
+  }
+
+  #[test]
+  fn test_new_set_member_value() {
+    let allocator = Allocator::new();
+    let mut script_ast = ScriptAst::new(&allocator);
+    let expression = script_ast.new_set_member_value(&["a", "b", "[c]"], &["d", "e", "[0]"]);
+    script_ast.append_to_root(expression);
+    let actual_code = script_ast.get_code();
+    assert_eq!(actual_code, "a.b[\"c\"] = d.e[0];\n");
   }
 
   // get_object_data_api

@@ -229,6 +229,8 @@ pub enum MatchOperation {
 pub struct TableParamItem {
   /// 属性名，对应实体类的字段名
   pub property: String,
+  /// 底层用一套最全面详尽的类型系统，不一层一层推导，而是基于这一套类型系统推导出不同语言的类型系统？
+  pub db_data_type: DbDataType,
   /// 比较操作
   pub operation: MatchOperation,
 }
@@ -250,6 +252,38 @@ pub struct TableParamSlot {
   pub name: String,
   /// 参数列表
   pub children: Vec<Either<TableParamItem, TableParamActionSlot>>,
+}
+
+impl TableParamSlot {
+  pub fn has_date_range_param(&self) -> bool {
+    self.children.iter().any(|child| {
+      if let Either::A(table_param) = child {
+        matches!(table_param.db_data_type, DbDataType::Date | DbDataType::DateTime) &&
+          table_param.operation == MatchOperation::Between
+      } else {
+        false
+      }
+    })
+  }
+
+  pub fn get_date_range_fields(&self) -> Vec<&str> {
+    self.children
+      .iter()
+      .filter_map(|child| {
+        if let Either::A(table_param) = child {
+          if matches!(table_param.db_data_type, DbDataType::Date | DbDataType::DateTime) &&
+            table_param.operation == MatchOperation::Between {
+            Some(table_param.property.as_str())
+          } else {
+            None
+          }
+        } else {
+          None
+        }
+      })
+      .collect()
+  }
+
 }
 //endregion
 

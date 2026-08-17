@@ -1,7 +1,7 @@
 use heck::ToUpperCamelCase;
 use napi::Either;
-use oxc_allocator::Allocator;
-use crate::db_types::{DbTableStructure, Form, FormField, MatchOperation, TableParamSlot};
+use oxc_allocator::{Allocator};
+use crate::db_types::{DbTableStructure, Form, MatchOperation, TableParamSlot};
 use crate::source_file::script_ast::ScriptAst;
 
 pub fn get_sfc_script_code(
@@ -9,7 +9,6 @@ pub fn get_sfc_script_code(
   page_key: String,
   dict_names: &[&str],
   db_table_structure: DbTableStructure,
-  between_date_fields: &[&str],
   table_param_slot: Option<TableParamSlot>,
   form: Option<Form>,
 ) -> String {
@@ -58,14 +57,15 @@ pub fn get_sfc_script_code(
   script_ast.add_const_ref_boolean("multiple", true);
   script_ast.add_const_ref_number("total", 0.0);
   script_ast.add_const_ref_string("title", "");
-
-  for date_field in between_date_fields {
-    let date_range_name = allocator.alloc_str(format!("dateRange{}", date_field.to_upper_camel_case()).as_str());
-    script_ast.add_const_ref_string_array(date_range_name);
-  }
-
+  
   // queryParams
   if let Some(table_param_slot) = &table_param_slot {
+    let date_range_fields = table_param_slot.get_date_range_fields();
+    for date_field in date_range_fields {
+      let date_range_name = allocator.alloc_str(format!("dateRange{}", date_field.to_upper_camel_case()).as_str());
+      script_ast.add_const_ref_string_array(date_range_name);
+    }
+    
     let mut query_params_properties = vec![
       script_ast.new_decimal_object_property("pageNum", 1.0),
       script_ast.new_decimal_object_property("pageSize", 10.0),
@@ -119,14 +119,32 @@ pub fn get_sfc_script_code(
   //region 函数
   // fetch data list 只有存在查询条件，才出现该方法。后续支持不需要任何查询条件的情况。
   if let Some(table_param_slot) = &table_param_slot {
+    let table_param_name = table_param_slot.name.as_str();
+    let mut try_statements = vec![];
+    if table_param_slot.has_date_range_param() {
+      try_statements.push(script_ast.new_clear_ref_object_property(table_param_name, "params"));
+    }
+    let date_range_fields = table_param_slot.get_date_range_fields();
+    for date_field in date_range_fields {
+      let date_range_name = allocator.alloc_str(format!("dateRange{}", date_field.to_upper_camel_case()).as_str());
+      let begin_params = allocator.alloc_str(format!("[begin{}]", date_field.to_upper_camel_case()).as_str());
+      let end_params = allocator.alloc_str(format!("[end{}]", date_field.to_upper_camel_case()).as_str());
+      try_statements.push(script_ast.new_if_statement(
+        script_ast.new_check_ref_value_is_blank(date_range_name),
+        [
+          script_ast.new_set_member_value(&[table_param_name, "value", "params", begin_params], &[date_range_name, "value", "[0]"]),
+          script_ast.new_set_member_value(&[table_param_name, "value", "params", end_params], &[date_range_name, "value", "[1]"]),
+        ]
+      ));
+    }
     let fetch_data_list_api_name = allocator.alloc_str(format!("fetch{}List", upper_page_key).as_str());
+    try_statements.push(script_ast.new_call_fetch_data_list_api(fetch_data_list_api_name, table_param_name));
+    try_statements.push(script_ast.new_set_ref_identifier_value(data_list_var_name.as_str(), "rows"));
+    try_statements.push(script_ast.new_set_ref_identifier_value("total", "total"));
+
     script_ast.add_arrow_async_function("getList", [], [
       script_ast.new_set_ref_boolean_value("loading", true),
-      script_ast.new_try_catch_finally_statement([
-        script_ast.new_call_fetch_data_list_api(fetch_data_list_api_name, table_param_slot.name.as_str()),
-        script_ast.new_set_ref_identifier_value(data_list_var_name.as_str(), "rows"),
-        script_ast.new_set_ref_identifier_value("total", "total"),
-      ], [
+      script_ast.new_try_catch_finally_statement(try_statements, [
         script_ast.new_call_console_error([
           script_ast.new_argument_identifier("e")
         ])
@@ -196,14 +214,30 @@ mod tests {
           TableParamItem {
             property: "column1".to_string(),
             operation: MatchOperation::Contains,
+            db_data_type: DbDataType::Varchar,
           }
         ),
         Either::A(
           TableParamItem {
             property: "column2".to_string(),
             operation: MatchOperation::Contains,
+            db_data_type: DbDataType::Varchar,
           }
-        )
+        ),
+        Either::A(
+          TableParamItem {
+            property: "theDate1".to_string(),
+            operation: MatchOperation::Between,
+            db_data_type: DbDataType::Date,
+          }
+        ),
+        Either::A(
+          TableParamItem {
+            property: "theDate2".to_string(),
+            operation: MatchOperation::Between,
+            db_data_type: DbDataType::Date,
+          }
+        ),
       ],
     };
     let form = Form {
@@ -228,7 +262,6 @@ mod tests {
       "demo".to_string(),
       &["dict_1", "dict_2"],
       db_table_structure,
-      &["theDate1", "theDate2"],
       Some(table_param_slot),
       Some(form),
     );
@@ -256,6 +289,15 @@ mod tests {
       "const getList = async () => {\n",
       "  loading.value = true;\n",
       "  try {\n",
+      "    queryParams.value.params = {};\n",
+      "    if (null != dateRangeTheDate1.value && \"\" != dateRangeTheDate1.value) {\n",
+      "      queryParams.value.params[\"beginTheDate1\"] = dateRangeTheDate1.value[0];\n",
+      "      queryParams.value.params[\"endTheDate1\"] = dateRangeTheDate1.value[1];\n",
+      "    }\n",
+      "    if (null != dateRangeTheDate2.value && \"\" != dateRangeTheDate2.value) {\n",
+      "      queryParams.value.params[\"beginTheDate2\"] = dateRangeTheDate2.value[0];\n",
+      "      queryParams.value.params[\"endTheDate2\"] = dateRangeTheDate2.value[1];\n",
+      "    }\n",
       "    const { rows, total } = await fetchDemoList(queryParams.value);\n",
       "    demoList.value = rows;\n",
       "    total.value = total;\n",
