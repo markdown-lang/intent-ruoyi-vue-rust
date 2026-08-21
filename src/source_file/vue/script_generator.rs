@@ -1,10 +1,10 @@
 use crate::db_types::{DbTableStructure, Form, MatchOperation, TableParamSlot};
 use crate::source_file::script_ast::ScriptAst;
+use crate::ui_types::PageInfo;
 use heck::{ToLowerCamelCase, ToUpperCamelCase};
 use napi::Either;
 use oxc_allocator::Allocator;
 use oxc_ast::ast::ObjectPropertyKind;
-use crate::ui_types::PageInfo;
 
 pub fn get_sfc_script_code(
   page_info: PageInfo,
@@ -107,7 +107,9 @@ pub fn get_sfc_script_code(
 
     let mut property_rules = vec![];
     for field in &form.fields {
-      if let Some(rule_info) = field.get_rule_info() && rule_info.required {
+      if let Some(rule_info) = field.get_rule_info()
+        && rule_info.required
+      {
         let property = allocator.alloc_str(rule_info.property);
         let message = allocator.alloc_str(format!("{}不能为空", rule_info.label).as_str());
         let property_rule = script_ast.new_array_object_property(
@@ -375,6 +377,7 @@ pub fn get_sfc_script_code(
     ],
   );
 
+  script_ast.add_call_function("getList", []);
   //endregion
 
   script_ast.get_code()
@@ -625,6 +628,7 @@ mod tests {
       "    console.error(\"删除取消或删除失败\", e);\n",
       "  }\n",
       "};\n",
+      "getList();\n",
     );
     assert_eq!(actual_code, expect_code);
   }
