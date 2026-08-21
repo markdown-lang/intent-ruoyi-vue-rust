@@ -94,6 +94,12 @@ pub struct DbTableStructure {
   pub foreign_constraints: Vec<ForeignConstraint>,
 }
 
+impl DbTableStructure {
+  pub fn get_primary_key_column_name(&self) -> String {
+    self.columns.iter().find(|c| c.primary).map(|c| c.name.clone()).unwrap_or_default()
+  }
+}
+
 #[napi(string_enum)]
 pub enum DbDataType {
   #[napi(value = "boolean")]
