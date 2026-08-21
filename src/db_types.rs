@@ -1,6 +1,6 @@
 use heck::{ToLowerCamelCase, ToUpperCamelCase};
-use napi_derive::napi;
 use napi::Either;
+use napi_derive::napi;
 
 /// 数据库表基本信息
 #[napi(object)]
@@ -45,7 +45,6 @@ pub struct DbColumn {
   /// 当列与表分开传入时，通过 table_name 与表结构定义建立关系；否则值为 None
   pub table_name: Option<String>,
 }
-
 
 /// 审计等常规字段
 pub const AUDIT_FIELDS: &[&str] = &[
@@ -96,7 +95,12 @@ pub struct DbTableStructure {
 
 impl DbTableStructure {
   pub fn get_primary_key_column_name(&self) -> String {
-    self.columns.iter().find(|c| c.primary).map(|c| c.name.clone()).unwrap_or_default()
+    self
+      .columns
+      .iter()
+      .find(|c| c.primary)
+      .map(|c| c.name.clone())
+      .unwrap_or_default()
   }
 }
 
@@ -168,44 +172,41 @@ impl DbDataType {
   pub fn is_ts_string_type(&self) -> bool {
     matches!(
       self,
-      DbDataType::Char |
-      DbDataType::Varchar |
-      DbDataType::NChar |
-      DbDataType::NVarchar |
-      DbDataType::Clob |
-      DbDataType::DateTime |
-      DbDataType::Date |
-      DbDataType::Time |
-      DbDataType::Timestamp |
-      DbDataType::Uuid |
-      DbDataType::Xml |
-      DbDataType::TinyText |
-      DbDataType::MediumText |
-      DbDataType::LongText
+      DbDataType::Char
+        | DbDataType::Varchar
+        | DbDataType::NChar
+        | DbDataType::NVarchar
+        | DbDataType::Clob
+        | DbDataType::DateTime
+        | DbDataType::Date
+        | DbDataType::Time
+        | DbDataType::Timestamp
+        | DbDataType::Uuid
+        | DbDataType::Xml
+        | DbDataType::TinyText
+        | DbDataType::MediumText
+        | DbDataType::LongText
     )
   }
 
   pub fn is_ts_number_type(&self) -> bool {
     matches!(
       self,
-      DbDataType::Number |
-      DbDataType::TinyInt |
-      DbDataType::SmallInt |
-      DbDataType::MediumInt |
-      DbDataType::Int |
-      DbDataType::BigInt |
-      DbDataType::Float |
-      DbDataType::Double |
-      DbDataType::Decimal |
-      DbDataType::Currency
+      DbDataType::Number
+        | DbDataType::TinyInt
+        | DbDataType::SmallInt
+        | DbDataType::MediumInt
+        | DbDataType::Int
+        | DbDataType::BigInt
+        | DbDataType::Float
+        | DbDataType::Double
+        | DbDataType::Decimal
+        | DbDataType::Currency
     )
   }
 
   pub fn is_ts_boolean_type(&self) -> bool {
-    matches!(
-      self,
-      DbDataType::Boolean
-    )
+    matches!(self, DbDataType::Boolean)
   }
 }
 
@@ -215,9 +216,8 @@ pub struct QueryParam {
   pub table_name: String,
   pub column_name: String,
   pub data_type: DbDataType,
-  pub operation: MatchOperation
+  pub operation: MatchOperation,
 }
-
 
 //region table 一级的查询条件
 
@@ -241,7 +241,7 @@ pub struct TableParamItem {
   pub operation: MatchOperation,
 }
 
-#[napi(string_enum="snake_case")]
+#[napi(string_enum = "snake_case")]
 pub enum UIParamActionKey {
   ListQuery,
   FormReset,
@@ -264,8 +264,10 @@ impl TableParamSlot {
   pub fn has_date_range_param(&self) -> bool {
     self.children.iter().any(|child| {
       if let Either::A(table_param) = child {
-        matches!(table_param.db_data_type, DbDataType::Date | DbDataType::DateTime) &&
-          table_param.operation == MatchOperation::Between
+        matches!(
+          table_param.db_data_type,
+          DbDataType::Date | DbDataType::DateTime
+        ) && table_param.operation == MatchOperation::Between
       } else {
         false
       }
@@ -273,12 +275,16 @@ impl TableParamSlot {
   }
 
   pub fn get_date_range_fields(&self) -> Vec<&str> {
-    self.children
+    self
+      .children
       .iter()
       .filter_map(|child| {
         if let Either::A(table_param) = child {
-          if matches!(table_param.db_data_type, DbDataType::Date | DbDataType::DateTime) &&
-            table_param.operation == MatchOperation::Between {
+          if matches!(
+            table_param.db_data_type,
+            DbDataType::Date | DbDataType::DateTime
+          ) && table_param.operation == MatchOperation::Between
+          {
             Some(table_param.property.as_str())
           } else {
             None
@@ -289,7 +295,6 @@ impl TableParamSlot {
       })
       .collect()
   }
-
 }
 //endregion
 
@@ -320,11 +325,31 @@ pub struct FormRuleInfo<'a> {
 impl FormField {
   pub fn get_rule_info(&self) -> Option<FormRuleInfo<'_>> {
     match self {
-      FormField::TextInput(f) => {Some(FormRuleInfo {property: f.property.as_str(), label: f.label.as_str(), required: f.required})}
-      FormField::NumberInput(f) => {Some(FormRuleInfo {property: f.property.as_str(), label: f.label.as_str(), required: f.required})}
-      FormField::Textarea(f) => {Some(FormRuleInfo {property: f.property.as_str(), label: f.label.as_str(), required: f.required})}
-      FormField::DatePicker(f) => {Some(FormRuleInfo {property: f.property.as_str(), label: f.label.as_str(), required: f.required})}
-      FormField::Select(f) => {Some(FormRuleInfo {property: f.property.as_str(), label: f.label.as_str(), required: f.required})}
+      FormField::TextInput(f) => Some(FormRuleInfo {
+        property: f.property.as_str(),
+        label: f.label.as_str(),
+        required: f.required,
+      }),
+      FormField::NumberInput(f) => Some(FormRuleInfo {
+        property: f.property.as_str(),
+        label: f.label.as_str(),
+        required: f.required,
+      }),
+      FormField::Textarea(f) => Some(FormRuleInfo {
+        property: f.property.as_str(),
+        label: f.label.as_str(),
+        required: f.required,
+      }),
+      FormField::DatePicker(f) => Some(FormRuleInfo {
+        property: f.property.as_str(),
+        label: f.label.as_str(),
+        required: f.required,
+      }),
+      FormField::Select(f) => Some(FormRuleInfo {
+        property: f.property.as_str(),
+        label: f.label.as_str(),
+        required: f.required,
+      }),
     }
   }
 }

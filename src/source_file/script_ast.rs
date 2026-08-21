@@ -1,5 +1,16 @@
 use oxc_allocator::{Allocator, ArenaBox, ArenaVec, CloneIn, GetAllocator};
-use oxc_ast::ast::{Argument, ArrayExpressionElement, ArrowFunctionBody, AssignmentOperator, AssignmentTarget, BinaryOperator, BindingIdentifier, BindingPattern, BindingProperty, BindingRestElement, BlockStatement, CatchClause, CatchParameter, Declaration, Directive, ExportNamedDeclaration, ExportSpecifier, Expression, FormalParameter, FormalParameterKind, FormalParameterRest, FormalParameters, Function, FunctionBody, FunctionType, IdentifierName, ImportDeclarationSpecifier, ImportOrExportKind, LogicalOperator, ModuleExportName, NumberBase, ObjectExpression, ObjectProperty, ObjectPropertyKind, Program, PropertyKey, PropertyKind, ReturnStatement, Statement, StringLiteral, TSInterfaceBody, TSInterfaceHeritage, TSSignature, TSType, TSTypeAnnotation, TSTypeName, TSTypeParameterDeclaration, TSTypeParameterInstantiation, TSUnionType, UnaryOperator, VariableDeclarationKind, VariableDeclarator, WithClause};
+use oxc_ast::ast::{
+  Argument, ArrayExpressionElement, ArrowFunctionBody, AssignmentOperator, AssignmentTarget,
+  BinaryOperator, BindingIdentifier, BindingPattern, BindingProperty, BindingRestElement,
+  BlockStatement, CatchClause, CatchParameter, Declaration, Directive, ExportNamedDeclaration,
+  ExportSpecifier, Expression, FormalParameter, FormalParameterKind, FormalParameterRest,
+  FormalParameters, Function, FunctionBody, FunctionType, IdentifierName,
+  ImportDeclarationSpecifier, ImportOrExportKind, LogicalOperator, ModuleExportName, NumberBase,
+  ObjectExpression, ObjectProperty, ObjectPropertyKind, Program, PropertyKey, PropertyKind,
+  ReturnStatement, Statement, StringLiteral, TSInterfaceBody, TSInterfaceHeritage, TSSignature,
+  TSType, TSTypeAnnotation, TSTypeName, TSTypeParameterDeclaration, TSTypeParameterInstantiation,
+  TSUnionType, UnaryOperator, VariableDeclarationKind, VariableDeclarator, WithClause,
+};
 use oxc_ast::builder::{AstBuilder, GetAstBuilder};
 use oxc_ast::{Comment, CommentKind};
 use oxc_codegen::{Codegen, CodegenOptions, IndentChar};
@@ -283,7 +294,10 @@ impl<'a> ScriptAst<'a> {
   }
 
   #[inline]
-  fn new_expression_array(&self, elements: impl IntoIterator<Item = ArrayExpressionElement<'a>>) -> Expression<'a> {
+  fn new_expression_array(
+    &self,
+    elements: impl IntoIterator<Item = ArrayExpressionElement<'a>>,
+  ) -> Expression<'a> {
     Expression::new_array_expression(SPAN, ArenaVec::from_iter_in(elements, self), self)
   }
 
@@ -293,7 +307,10 @@ impl<'a> ScriptAst<'a> {
   }
 
   #[inline]
-  fn new_expression_object(&self, properties: impl IntoIterator<Item = ObjectPropertyKind<'a>>) -> Expression<'a> {
+  fn new_expression_object(
+    &self,
+    properties: impl IntoIterator<Item = ObjectPropertyKind<'a>>,
+  ) -> Expression<'a> {
     Expression::new_object_expression(SPAN, ArenaVec::from_iter_in(properties, self), self)
   }
 
@@ -322,11 +339,7 @@ impl<'a> ScriptAst<'a> {
 
   pub fn new_const_expression(&self, name: &'a str, value: Expression<'a>) -> Statement<'a> {
     let id = BindingPattern::new_binding_identifier(SPAN, name, self);
-    self.new_variable_declaration(
-      VariableDeclarationKind::Const,
-      id,
-      value,
-    )
+    self.new_variable_declaration(VariableDeclarationKind::Const, id, value)
   }
 
   pub fn add_const_ref_boolean(&mut self, name: &'a str, value: bool) {
@@ -362,8 +375,14 @@ impl<'a> ScriptAst<'a> {
     type_name: &'a str,
     object_properties: impl IntoIterator<Item = ObjectPropertyKind<'a>>,
   ) {
-    let ts_type = TSType::new_ts_type_reference(SPAN, TSTypeName::new_identifier_reference(SPAN, type_name, self), None, self);
-    let argument = Argument::new_object_expression(SPAN, ArenaVec::from_iter_in(object_properties, self), self);
+    let ts_type = TSType::new_ts_type_reference(
+      SPAN,
+      TSTypeName::new_identifier_reference(SPAN, type_name, self),
+      None,
+      self,
+    );
+    let argument =
+      Argument::new_object_expression(SPAN, ArenaVec::from_iter_in(object_properties, self), self);
     let init_expr = self.call_ref(ts_type, argument);
     self.add_named_variable_declaration(VariableDeclarationKind::Const, var_name, init_expr);
   }
@@ -394,12 +413,7 @@ impl<'a> ScriptAst<'a> {
     let empty_array_argument = self.new_argument_empty_array();
 
     let ident_ref = TSTypeName::new_identifier_reference(SPAN, type_name, self);
-    let ts_type = TSType::new_ts_type_reference(
-      SPAN,
-      ident_ref,
-      None,
-      self
-    );
+    let ts_type = TSType::new_ts_type_reference(SPAN, ident_ref, None, self);
     let ts_array_type = TSType::new_ts_array_type(SPAN, ts_type, self);
 
     let init_expr = self.call_ref(ts_array_type, empty_array_argument);
@@ -414,11 +428,8 @@ impl<'a> ScriptAst<'a> {
     let input_arguments = ArenaVec::from_value_in(argument, self);
     // 函数的泛型参数
     let type_parameters = ArenaVec::from_value_in(ts_type, self);
-    let type_parameters_instantiation = TSTypeParameterInstantiation::boxed(
-      SPAN,
-      type_parameters,
-      self
-    );
+    let type_parameters_instantiation =
+      TSTypeParameterInstantiation::boxed(SPAN, type_parameters, self);
 
     // 组装完整表达式
     Expression::new_call_expression(
@@ -437,27 +448,13 @@ impl<'a> ScriptAst<'a> {
     let argument = Argument::new_object_expression(SPAN, properties, self);
     let input_arguments = ArenaVec::from_value_in(argument, self);
 
-    Expression::new_call_expression(
-      SPAN,
-      reactive_expr,
-      None,
-      input_arguments,
-      false,
-      self,
-    )
+    Expression::new_call_expression(SPAN, reactive_expr, None, input_arguments, false, self)
   }
 
   fn call_use_template_ref(&self, ref_key: &'a str) -> Expression<'a> {
     let callee = Expression::new_identifier(SPAN, "useTemplateRef", self);
     let input_arguments = ArenaVec::from_value_in(self.new_argument_string(ref_key), self);
-    Expression::new_call_expression(
-      SPAN,
-      callee,
-      None,
-      input_arguments,
-      false,
-      self,
-    )
+    Expression::new_call_expression(SPAN, callee, None, input_arguments, false, self)
   }
 
   pub fn add_const_reactive_object(
@@ -467,7 +464,12 @@ impl<'a> ScriptAst<'a> {
     object_properties: impl IntoIterator<Item = ObjectPropertyKind<'a>>,
   ) {
     let init_expr = self.call_reactive(ArenaVec::from_iter_in(object_properties, self));
-    self.add_named_typed_variable_declaration(VariableDeclarationKind::Const, var_name, type_names, init_expr);
+    self.add_named_typed_variable_declaration(
+      VariableDeclarationKind::Const,
+      var_name,
+      type_names,
+      init_expr,
+    );
   }
 
   pub fn add_const_use_template_ref(&mut self, ref_key: &'a str) {
@@ -488,7 +490,11 @@ impl<'a> ScriptAst<'a> {
     )
   }
 
-  pub fn new_string_object_property(&self, name: &'a str, value: &'a str) -> ObjectPropertyKind<'a> {
+  pub fn new_string_object_property(
+    &self,
+    name: &'a str,
+    value: &'a str,
+  ) -> ObjectPropertyKind<'a> {
     ObjectPropertyKind::new_object_property(
       SPAN,
       PropertyKind::Init,
@@ -527,7 +533,11 @@ impl<'a> ScriptAst<'a> {
     )
   }
 
-  pub fn new_array_object_property(&self, name: &'a str, elements: impl IntoIterator<Item = ArrayExpressionElement<'a>>) -> ObjectPropertyKind<'a> {
+  pub fn new_array_object_property(
+    &self,
+    name: &'a str,
+    elements: impl IntoIterator<Item = ArrayExpressionElement<'a>>,
+  ) -> ObjectPropertyKind<'a> {
     ObjectPropertyKind::new_object_property(
       SPAN,
       PropertyKind::Init,
@@ -539,9 +549,16 @@ impl<'a> ScriptAst<'a> {
       self,
     )
   }
-  
-  pub fn new_array_object_element(&self, object_properties: impl IntoIterator<Item = ObjectPropertyKind<'a>>,) -> ArrayExpressionElement<'a> {
-    ArrayExpressionElement::new_object_expression(SPAN, ArenaVec::from_iter_in(object_properties, self), self)
+
+  pub fn new_array_object_element(
+    &self,
+    object_properties: impl IntoIterator<Item = ObjectPropertyKind<'a>>,
+  ) -> ArrayExpressionElement<'a> {
+    ArrayExpressionElement::new_object_expression(
+      SPAN,
+      ArenaVec::from_iter_in(object_properties, self),
+      self,
+    )
   }
 
   fn add_named_variable_declaration(
@@ -569,16 +586,9 @@ impl<'a> ScriptAst<'a> {
     &self,
     kind: VariableDeclarationKind,
     id: BindingPattern<'a>,
-    init_expr: Expression<'a>
+    init_expr: Expression<'a>,
   ) -> Statement<'a> {
-    let declarator = VariableDeclarator::new(
-      SPAN,
-      id,
-      None,
-      Some(init_expr),
-      false,
-      self,
-    );
+    let declarator = VariableDeclarator::new(SPAN, id, None, Some(init_expr), false, self);
 
     let declarations = ArenaVec::from_value_in(declarator, self);
     Statement::new_variable_declaration(SPAN, kind, declarations, false, self)
@@ -665,7 +675,7 @@ impl<'a> ScriptAst<'a> {
   pub fn new_set_ref_object_value(
     &self,
     name: &'a str,
-    object_properties: impl IntoIterator<Item = ObjectPropertyKind<'a>>
+    object_properties: impl IntoIterator<Item = ObjectPropertyKind<'a>>,
   ) -> Statement<'a> {
     let right_expr = self.new_expression_object(object_properties);
     self.new_set_ref_value(name, right_expr)
@@ -676,21 +686,24 @@ impl<'a> ScriptAst<'a> {
     self.new_set_ref_value(name, right_expr)
   }
 
-  pub fn new_set_ref_expression_value(&self, name: &'a str, value: Expression<'a>) -> Statement<'a> {
+  pub fn new_set_ref_expression_value(
+    &self,
+    name: &'a str,
+    value: Expression<'a>,
+  ) -> Statement<'a> {
     self.new_set_ref_value(name, value)
   }
 
-  pub fn new_clear_ref_object_property(&self, object_name: &'a str, property_key: &'a str) -> Statement<'a> {
+  pub fn new_clear_ref_object_property(
+    &self,
+    object_name: &'a str,
+    property_key: &'a str,
+  ) -> Statement<'a> {
     let object_expr = Expression::new_identifier(SPAN, object_name, self);
 
     let value_ident = IdentifierName::new(SPAN, "value", self);
-    let object_value_expr = Expression::new_static_member_expression(
-      SPAN,
-      object_expr,
-      value_ident,
-      false,
-      self,
-    );
+    let object_value_expr =
+      Expression::new_static_member_expression(SPAN, object_expr, value_ident, false, self);
 
     let property_key_ident = IdentifierName::new(SPAN, property_key, self);
 
@@ -706,11 +719,7 @@ impl<'a> ScriptAst<'a> {
       SPAN,
       AssignmentOperator::Assign,
       left_target,
-      Expression::new_object_expression(
-        SPAN,
-        ArenaVec::new_in(self),
-        self,
-      ),
+      Expression::new_object_expression(SPAN, ArenaVec::new_in(self), self),
       self,
     );
 
@@ -720,13 +729,8 @@ impl<'a> ScriptAst<'a> {
   pub fn new_check_ref_value_is_blank(&self, name: &'a str) -> Expression<'a> {
     let object_expr = Expression::new_identifier(SPAN, name, self);
     let value_ident = IdentifierName::new(SPAN, "value", self);
-    let object_value_expr = Expression::new_static_member_expression(
-      SPAN,
-      object_expr,
-      value_ident,
-      false,
-      self,
-    );
+    let object_value_expr =
+      Expression::new_static_member_expression(SPAN, object_expr, value_ident, false, self);
 
     let not_null_expr = Expression::new_binary_expression(
       SPAN,
@@ -775,19 +779,16 @@ impl<'a> ScriptAst<'a> {
       for part in middle_parts {
         let part = *part;
         if is_computed_member(part) {
-          if let Some(key) = part.strip_prefix('[').and_then(|part| part.strip_suffix(']')) {
+          if let Some(key) = part
+            .strip_prefix('[')
+            .and_then(|part| part.strip_suffix(']'))
+          {
             let prop_expr = if let Ok(num) = key.parse::<f64>() {
               Expression::new_numeric_literal(SPAN, num, None, NumberBase::Decimal, self)
             } else {
               Expression::new_string_literal(SPAN, key, None, self)
             };
-            expr = Expression::new_computed_member_expression(
-              SPAN,
-              expr,
-              prop_expr,
-              false,
-              self,
-            )
+            expr = Expression::new_computed_member_expression(SPAN, expr, prop_expr, false, self)
           }
         } else {
           expr = Expression::new_static_member_expression(
@@ -807,13 +808,7 @@ impl<'a> ScriptAst<'a> {
         } else {
           Expression::new_string_literal(SPAN, key, None, self)
         };
-        AssignmentTarget::new_computed_member_expression(
-          SPAN,
-          expr,
-          prop_expr,
-          false,
-          self,
-        )
+        AssignmentTarget::new_computed_member_expression(SPAN, expr, prop_expr, false, self)
       } else {
         AssignmentTarget::new_static_member_expression(
           SPAN,
@@ -832,19 +827,16 @@ impl<'a> ScriptAst<'a> {
     for part in parts.iter().skip(1) {
       let part = *part;
       if is_computed_member(part) {
-        if let Some(key) = part.strip_prefix('[').and_then(|part| part.strip_suffix(']')) {
+        if let Some(key) = part
+          .strip_prefix('[')
+          .and_then(|part| part.strip_suffix(']'))
+        {
           let prop_expr = if let Ok(num) = key.parse::<f64>() {
             Expression::new_numeric_literal(SPAN, num, None, NumberBase::Decimal, self)
           } else {
             Expression::new_string_literal(SPAN, key, None, self)
           };
-          expr = Expression::new_computed_member_expression(
-            SPAN,
-            expr,
-            prop_expr,
-            false,
-            self,
-          )
+          expr = Expression::new_computed_member_expression(SPAN, expr, prop_expr, false, self)
         }
       } else {
         expr = Expression::new_static_member_expression(
@@ -869,7 +861,11 @@ impl<'a> ScriptAst<'a> {
     Expression::new_ts_non_null_expression(SPAN, expression, self)
   }
 
-  pub fn new_set_member_identifier_value(&self, member_parts: &[&'a str], value_parts: &[&'a str]) -> Statement<'a> {
+  pub fn new_set_member_identifier_value(
+    &self,
+    member_parts: &[&'a str],
+    value_parts: &[&'a str],
+  ) -> Statement<'a> {
     let left_target = self.new_left_member_assign_target(member_parts);
     let right_expr = self.new_right_member_expression(value_parts);
     let expression = Expression::new_assignment_expression(
@@ -972,7 +968,11 @@ impl<'a> ScriptAst<'a> {
     )
   }
 
-  pub fn new_formal_type_parameter(&self, param_name: &'a str, type_name: &'a str) -> FormalParameter<'a> {
+  pub fn new_formal_type_parameter(
+    &self,
+    param_name: &'a str,
+    type_name: &'a str,
+  ) -> FormalParameter<'a> {
     let pattern = BindingPattern::new_binding_identifier(SPAN, param_name, self);
 
     let ts_type = TSType::new_ts_type_reference(
@@ -997,12 +997,21 @@ impl<'a> ScriptAst<'a> {
     )
   }
 
-  pub fn new_formal_array_parameter(&self, param_name: &'a str, element_type: &'a str) -> FormalParameter<'a> {
+  pub fn new_formal_array_parameter(
+    &self,
+    param_name: &'a str,
+    element_type: &'a str,
+  ) -> FormalParameter<'a> {
     let pattern = BindingPattern::new_binding_identifier(SPAN, param_name, self);
 
     let ts_type = TSType::new_ts_array_type(
       SPAN,
-      TSType::new_ts_type_reference(SPAN, TSTypeName::new_identifier_reference(SPAN, element_type, self), None, self),
+      TSType::new_ts_type_reference(
+        SPAN,
+        TSTypeName::new_identifier_reference(SPAN, element_type, self),
+        None,
+        self,
+      ),
       self,
     );
     let ts_type_anno = TSTypeAnnotation::boxed(SPAN, ts_type, self);
@@ -1045,7 +1054,11 @@ impl<'a> ScriptAst<'a> {
     TSType::new_ts_array_type(SPAN, TSType::new_ts_boolean_keyword(SPAN, self), self)
   }
 
-  pub fn new_formal_union_types_parameter(&self, param_name: &'a str, ts_types: impl IntoIterator<Item = TSType<'a>>) -> FormalParameter<'a> {
+  pub fn new_formal_union_types_parameter(
+    &self,
+    param_name: &'a str,
+    ts_types: impl IntoIterator<Item = TSType<'a>>,
+  ) -> FormalParameter<'a> {
     let pattern = BindingPattern::new_binding_identifier(SPAN, param_name, self);
 
     let ts_type = self.new_union_type(ts_types);
@@ -1066,11 +1079,17 @@ impl<'a> ScriptAst<'a> {
     )
   }
 
-  pub fn new_call_console_log(&self, args: impl IntoIterator<Item = Argument<'a>>) -> Statement<'a> {
+  pub fn new_call_console_log(
+    &self,
+    args: impl IntoIterator<Item = Argument<'a>>,
+  ) -> Statement<'a> {
     self.new_call_object_method_statement("console", "log", args)
   }
 
-  pub fn new_call_console_error(&self, args: impl IntoIterator<Item = Argument<'a>>) -> Statement<'a> {
+  pub fn new_call_console_error(
+    &self,
+    args: impl IntoIterator<Item = Argument<'a>>,
+  ) -> Statement<'a> {
     self.new_call_object_method_statement("console", "error", args)
   }
 
@@ -1096,35 +1115,16 @@ impl<'a> ScriptAst<'a> {
 
     let callee = Expression::new_identifier(SPAN, "useDict", self);
 
-    let expression = Expression::new_call_expression(
-      SPAN,
-      callee,
-      None,
-      call_args,
-      false,
-      self,
-    );
+    let expression = Expression::new_call_expression(SPAN, callee, None, call_args, false, self);
 
     let kind = VariableDeclarationKind::Const;
 
-    let declarator = VariableDeclarator::new(
-      SPAN,
-      obj_pattern,
-      None,
-      Some(expression),
-      false,
-      self,
-    );
+    let declarator =
+      VariableDeclarator::new(SPAN, obj_pattern, None, Some(expression), false, self);
 
     let declarations = ArenaVec::from_value_in(declarator, self);
 
-    let statement = Statement::new_variable_declaration(
-      SPAN,
-      kind,
-      declarations,
-      false,
-      self
-    );
+    let statement = Statement::new_variable_declaration(SPAN, kind, declarations, false, self);
     self.append_to_root(statement);
   }
 
@@ -1149,15 +1149,8 @@ impl<'a> ScriptAst<'a> {
       self,
     );
 
-    let init_expr = Expression::new_arrow_function_expression(
-      SPAN,
-      false,
-      None,
-      formal_params,
-      None,
-      body,
-      self,
-    );
+    let init_expr =
+      Expression::new_arrow_function_expression(SPAN, false, None, formal_params, None, body, self);
 
     self.add_named_variable_declaration(VariableDeclarationKind::Const, name, init_expr);
   }
@@ -1183,15 +1176,8 @@ impl<'a> ScriptAst<'a> {
       self,
     );
 
-    let init_expr = Expression::new_arrow_function_expression(
-      SPAN,
-      true,
-      None,
-      formal_params,
-      None,
-      body,
-      self,
-    );
+    let init_expr =
+      Expression::new_arrow_function_expression(SPAN, true, None, formal_params, None, body, self);
 
     self.add_named_variable_declaration(VariableDeclarationKind::Const, name, init_expr);
   }
@@ -1239,7 +1225,8 @@ impl<'a> ScriptAst<'a> {
   ) -> Expression<'a> {
     let member_expr = self.new_right_member_expression(member_names);
     let method_name_ident = IdentifierName::new(SPAN, method_name, self);
-    let callee = Expression::new_static_member_expression(SPAN, member_expr, method_name_ident, false, self);
+    let callee =
+      Expression::new_static_member_expression(SPAN, member_expr, method_name_ident, false, self);
     Expression::new_call_expression(
       SPAN,
       callee,
@@ -1260,8 +1247,12 @@ impl<'a> ScriptAst<'a> {
     Statement::new_expression_statement(SPAN, call_expr, self)
   }
 
-  pub fn new_call_function(&self, function_name: &'a str, args: impl IntoIterator<Item = Argument<'a>>) -> Statement<'a> {
-    let callee = Expression::new_identifier(SPAN, function_name,  self);
+  pub fn new_call_function(
+    &self,
+    function_name: &'a str,
+    args: impl IntoIterator<Item = Argument<'a>>,
+  ) -> Statement<'a> {
+    let callee = Expression::new_identifier(SPAN, function_name, self);
 
     let expression = Expression::new_call_expression(
       SPAN,
@@ -1274,7 +1265,11 @@ impl<'a> ScriptAst<'a> {
     Statement::new_expression_statement(SPAN, expression, self)
   }
 
-  pub fn add_call_function(&mut self, function_name: &'a str, args: impl IntoIterator<Item = Argument<'a>>) {
+  pub fn add_call_function(
+    &mut self,
+    function_name: &'a str,
+    args: impl IntoIterator<Item = Argument<'a>>,
+  ) {
     let statement = self.new_call_function(function_name, args);
     self.append_to_root(statement);
   }
@@ -1282,13 +1277,10 @@ impl<'a> ScriptAst<'a> {
 
   //region call ui expose
   pub fn new_call_form_validate(&self, form_ref_key: &'a str) -> Statement<'a> {
-    let form_validate_expr = self.new_call_member_method_expression(&[form_ref_key, "value?"], "validate", []);
+    let form_validate_expr =
+      self.new_call_member_method_expression(&[form_ref_key, "value?"], "validate", []);
 
-    let await_expr = Expression::new_await_expression(
-      SPAN,
-      form_validate_expr,
-      self,
-    );
+    let await_expr = Expression::new_await_expression(SPAN, form_validate_expr, self);
     Statement::new_expression_statement(SPAN, await_expr, self)
   }
 
@@ -1296,7 +1288,7 @@ impl<'a> ScriptAst<'a> {
     self.new_call_object_method_statement(
       "modal",
       "msgSuccess",
-      [self.new_argument_string(content),]
+      [self.new_argument_string(content)],
     )
   }
 
@@ -1304,13 +1296,9 @@ impl<'a> ScriptAst<'a> {
     let method_expr = self.new_call_object_method_expression(
       "modal",
       "confirm",
-      [self.new_argument_string(content),]
+      [self.new_argument_string(content)],
     );
-    let await_expr = Expression::new_await_expression(
-      SPAN,
-      method_expr,
-      self,
-    );
+    let await_expr = Expression::new_await_expression(SPAN, method_expr, self);
     Statement::new_expression_statement(SPAN, await_expr, self)
   }
   //endregion
@@ -1334,21 +1322,10 @@ impl<'a> ScriptAst<'a> {
 
     let body = TSInterfaceBody::boxed(SPAN, ArenaVec::from_iter_in(properties, self), self);
 
-    let interface_declaration = Declaration::new_ts_interface_declaration(
-      SPAN,
-      bind_ident,
-      None,
-      extends,
-      body,
-      false,
-      self,
-    );
+    let interface_declaration =
+      Declaration::new_ts_interface_declaration(SPAN, bind_ident, None, extends, body, false, self);
 
-    let statement = Statement::new_export_declaration(
-      SPAN,
-      interface_declaration,
-      self,
-    );
+    let statement = Statement::new_export_declaration(SPAN, interface_declaration, self);
 
     self.append_to_root(statement);
   }
@@ -1396,7 +1373,12 @@ impl<'a> ScriptAst<'a> {
   }
 
   /// 引用外部类型
-  pub fn new_interface_property_type(&self, name: &'a str, type_name: &'a str, optional: bool) -> TSSignature<'a> {
+  pub fn new_interface_property_type(
+    &self,
+    name: &'a str,
+    type_name: &'a str,
+    optional: bool,
+  ) -> TSSignature<'a> {
     let ident_ref = TSTypeName::new_identifier_reference(SPAN, type_name, self);
     let ts_type = TSType::new_ts_type_reference(SPAN, ident_ref, None, self);
 
@@ -1411,7 +1393,12 @@ impl<'a> ScriptAst<'a> {
     )
   }
 
-  pub fn new_interface_property_array_type(&self, name: &'a str, type_name: &'a str, optional: bool) -> TSSignature<'a> {
+  pub fn new_interface_property_array_type(
+    &self,
+    name: &'a str,
+    type_name: &'a str,
+    optional: bool,
+  ) -> TSSignature<'a> {
     let ident_ref = TSTypeName::new_identifier_reference(SPAN, type_name, self);
     let ts_type = TSType::new_ts_type_reference(SPAN, ident_ref, None, self);
     let ts_array_type = TSType::new_ts_array_type(SPAN, ts_type, self);
@@ -1441,12 +1428,13 @@ impl<'a> ScriptAst<'a> {
   }
 
   /// 内部嵌套类型
-  pub fn new_interface_property_type_literal(&self, name: &'a str, members: impl IntoIterator<Item = TSSignature<'a>>, optional: bool) -> TSSignature<'a> {
-    let ts_type = TSType::new_ts_type_literal(
-      SPAN,
-      ArenaVec::from_iter_in(members, self),
-      self,
-    );
+  pub fn new_interface_property_type_literal(
+    &self,
+    name: &'a str,
+    members: impl IntoIterator<Item = TSSignature<'a>>,
+    optional: bool,
+  ) -> TSSignature<'a> {
+    let ts_type = TSType::new_ts_type_literal(SPAN, ArenaVec::from_iter_in(members, self), self);
     TSSignature::new_ts_property_signature(
       SPAN,
       false,
@@ -1495,40 +1483,28 @@ impl<'a> ScriptAst<'a> {
     self.new_call_object_method_statement("request", "get", args)
   }
 
-  pub fn new_return_request_get_statement(&self, url: &'a str, config: &[&'a str]) -> Statement<'a> {
+  pub fn new_return_request_get_statement(
+    &self,
+    url: &'a str,
+    config: &[&'a str],
+  ) -> Statement<'a> {
     let expression = self.new_call_request_get_expression(url, config);
-    Statement::new_return_statement(
-      SPAN,
-      Some(expression),
-      self
-    )
+    Statement::new_return_statement(SPAN, Some(expression), self)
   }
 
   pub fn new_return_request_post_statement(&self, url: &'a str, data: &'a str) -> Statement<'a> {
     let expression = self.new_call_request_post_expression(url, data);
-    Statement::new_return_statement(
-      SPAN,
-      Some(expression),
-      self
-    )
+    Statement::new_return_statement(SPAN, Some(expression), self)
   }
 
   pub fn new_return_request_put_statement(&self, url: &'a str, data: &'a str) -> Statement<'a> {
     let expression = self.new_call_request_put_expression(url, data);
-    Statement::new_return_statement(
-      SPAN,
-      Some(expression),
-      self
-    )
+    Statement::new_return_statement(SPAN, Some(expression), self)
   }
 
   pub fn new_return_request_delete_statement(&self, url: &'a str) -> Statement<'a> {
     let expression = self.new_call_request_delete_expression(url);
-    Statement::new_return_statement(
-      SPAN,
-      Some(expression),
-      self
-    )
+    Statement::new_return_statement(SPAN, Some(expression), self)
   }
 
   pub fn new_call_request_post_expression(&self, url: &'a str, data: &'a str) -> Expression<'a> {
@@ -1617,7 +1593,7 @@ impl<'a> ScriptAst<'a> {
     function_name: &'a str,
     input_params: impl IntoIterator<Item = FormalParameter<'a>>,
     return_type_names: &[&'a str],
-    body_statements: impl IntoIterator<Item = Statement<'a>>
+    body_statements: impl IntoIterator<Item = Statement<'a>>,
   ) {
     let mut all_return_type_names = ArenaVec::with_capacity_in(return_type_names.len() + 1, self);
     all_return_type_names.push("Promise");
@@ -1657,11 +1633,7 @@ impl<'a> ScriptAst<'a> {
       self,
     );
 
-    let statement = Statement::new_export_declaration(
-      SPAN,
-      declaration,
-      self,
-    );
+    let statement = Statement::new_export_declaration(SPAN, declaration, self);
 
     self.append_to_root(statement);
   }
@@ -1689,7 +1661,11 @@ impl<'a> ScriptAst<'a> {
     ObjectExpression::boxed(SPAN, properties, self)
   }
 
-  pub fn new_call_fetch_data_list_api(&self, function_name: &'a str, query_params_name: &'a str) -> Statement<'a> {
+  pub fn new_call_fetch_data_list_api(
+    &self,
+    function_name: &'a str,
+    query_params_name: &'a str,
+  ) -> Statement<'a> {
     let left_id = self.new_binding_object_pattern(&["rows", "total"]);
 
     let callee = Expression::new_identifier(SPAN, function_name, self);
@@ -1703,29 +1679,11 @@ impl<'a> ScriptAst<'a> {
     );
     let call_args = ArenaVec::from_value_in(query_param_value, self);
 
-    let await_arg= Expression::new_call_expression(
-      SPAN,
-      callee,
-      None,
-      call_args,
-      false,
-      self,
-    );
+    let await_arg = Expression::new_call_expression(SPAN, callee, None, call_args, false, self);
 
-    let right_expr = Expression::new_await_expression(
-      SPAN,
-      await_arg,
-      self,
-    );
+    let right_expr = Expression::new_await_expression(SPAN, await_arg, self);
 
-    let var_decl = VariableDeclarator::new(
-      SPAN,
-      left_id,
-      None,
-      Some(right_expr),
-      false,
-      self,
-    );
+    let var_decl = VariableDeclarator::new(SPAN, left_id, None, Some(right_expr), false, self);
 
     Statement::new_variable_declaration(
       SPAN,
@@ -1736,36 +1694,22 @@ impl<'a> ScriptAst<'a> {
     )
   }
 
-  pub fn new_call_fetch_one_data_by_id_api(&self, function_name: &'a str, id_param_name: &'a str) -> Statement<'a> {
+  pub fn new_call_fetch_one_data_by_id_api(
+    &self,
+    function_name: &'a str,
+    id_param_name: &'a str,
+  ) -> Statement<'a> {
     let left_id = self.new_binding_object_pattern(&["data"]);
 
     let callee = Expression::new_identifier(SPAN, function_name, self);
     let id_ident = self.new_argument_identifier(id_param_name);
     let call_args = ArenaVec::from_value_in(id_ident, self);
 
-    let await_arg= Expression::new_call_expression(
-      SPAN,
-      callee,
-      None,
-      call_args,
-      false,
-      self,
-    );
+    let await_arg = Expression::new_call_expression(SPAN, callee, None, call_args, false, self);
 
-    let right_expr = Expression::new_await_expression(
-      SPAN,
-      await_arg,
-      self,
-    );
+    let right_expr = Expression::new_await_expression(SPAN, await_arg, self);
 
-    let var_decl = VariableDeclarator::new(
-      SPAN,
-      left_id,
-      None,
-      Some(right_expr),
-      false,
-      self,
-    );
+    let var_decl = VariableDeclarator::new(SPAN, left_id, None, Some(right_expr), false, self);
 
     Statement::new_variable_declaration(
       SPAN,
@@ -1776,7 +1720,11 @@ impl<'a> ScriptAst<'a> {
     )
   }
 
-  pub fn new_call_save_one_data_api(&self, function_name: &'a str, form_name: &'a str) -> Statement<'a> {
+  pub fn new_call_save_one_data_api(
+    &self,
+    function_name: &'a str,
+    form_name: &'a str,
+  ) -> Statement<'a> {
     let callee = Expression::new_identifier(SPAN, function_name, self);
 
     let param_expr = Argument::new_static_member_expression(
@@ -1788,73 +1736,45 @@ impl<'a> ScriptAst<'a> {
     );
     let call_args = ArenaVec::from_value_in(param_expr, self);
 
-    let await_arg= Expression::new_call_expression(
-      SPAN,
-      callee,
-      None,
-      call_args,
-      false,
-      self,
-    );
+    let await_arg = Expression::new_call_expression(SPAN, callee, None, call_args, false, self);
 
-    let right_expr = Expression::new_await_expression(
-      SPAN,
-      await_arg,
-      self,
-    );
+    let right_expr = Expression::new_await_expression(SPAN, await_arg, self);
 
-    Statement::new_expression_statement(
-      SPAN,
-      right_expr,
-      self,
-    )
+    Statement::new_expression_statement(SPAN, right_expr, self)
   }
 
-  pub fn new_call_delete_one_data_by_id(&self, function_name: &'a str, ids_param_name: &'a str) -> Statement<'a> {
+  pub fn new_call_delete_one_data_by_id(
+    &self,
+    function_name: &'a str,
+    ids_param_name: &'a str,
+  ) -> Statement<'a> {
     let callee = Expression::new_identifier(SPAN, function_name, self);
     let id_ident = self.new_argument_identifier(ids_param_name);
     let call_args = ArenaVec::from_value_in(id_ident, self);
 
-    let await_arg= Expression::new_call_expression(
-      SPAN,
-      callee,
-      None,
-      call_args,
-      false,
-      self,
-    );
+    let await_arg = Expression::new_call_expression(SPAN, callee, None, call_args, false, self);
 
-    let right_expr = Expression::new_await_expression(
-      SPAN,
-      await_arg,
-      self,
-    );
+    let right_expr = Expression::new_await_expression(SPAN, await_arg, self);
 
-    Statement::new_expression_statement(
-      SPAN,
-      right_expr,
-      self,
-    )
+    Statement::new_expression_statement(SPAN, right_expr, self)
   }
 
   fn new_binding_object_pattern(&self, keys: &[&'a str]) -> BindingPattern<'a> {
-    let obj_props = ArenaVec::from_iter_in(keys.iter().map(|key| {
-      BindingProperty::new(
-        SPAN,
-        PropertyKey::new_static_identifier(SPAN, *key, self),
-        BindingPattern::new_binding_identifier(SPAN, *key, self),
-        true,
-        false,
-        self,
-      )
-    }), self);
-
-    BindingPattern::new_object_pattern(
-      SPAN,
-      obj_props,
-      None,
+    let obj_props = ArenaVec::from_iter_in(
+      keys.iter().map(|key| {
+        BindingProperty::new(
+          SPAN,
+          PropertyKey::new_static_identifier(SPAN, *key, self),
+          BindingPattern::new_binding_identifier(SPAN, *key, self),
+          true,
+          false,
+          self,
+        )
+      }),
       self,
-    )
+    );
+
+    BindingPattern::new_object_pattern(SPAN, obj_props, None, self)
   }
   //endregion
 
@@ -1878,7 +1798,7 @@ impl<'a> ScriptAst<'a> {
   pub fn add_union_type_alias(
     &mut self,
     alias: &'a str,
-    ts_types: impl IntoIterator<Item = TSType<'a>>
+    ts_types: impl IntoIterator<Item = TSType<'a>>,
   ) -> Statement<'a> {
     let current_type = self.new_union_type(ts_types);
     Statement::new_ts_type_alias_declaration(
@@ -1929,11 +1849,7 @@ impl<'a> ScriptAst<'a> {
   }
 
   fn new_union_type(&self, ts_types: impl IntoIterator<Item = TSType<'a>>) -> TSType<'a> {
-    TSType::new_ts_union_type(
-      SPAN,
-      ArenaVec::from_iter_in(ts_types, self),
-      self
-    )
+    TSType::new_ts_union_type(SPAN, ArenaVec::from_iter_in(ts_types, self), self)
   }
 
   pub fn new_try_catch_finally_statement(
@@ -2044,7 +1960,11 @@ impl<'a> ScriptAst<'a> {
     )
   }
 
-  pub fn new_member_not_equal_number(&self, member_parts: &[&'a str], value: f64) -> Expression<'a> {
+  pub fn new_member_not_equal_number(
+    &self,
+    member_parts: &[&'a str],
+    value: f64,
+  ) -> Expression<'a> {
     let member_expr = self.new_right_member_expression(member_parts);
     Expression::new_binary_expression(
       SPAN,
@@ -2057,12 +1977,7 @@ impl<'a> ScriptAst<'a> {
 
   pub fn new_member_not(&self, member_parts: &[&'a str]) -> Expression<'a> {
     let member_expr = self.new_right_member_expression(member_parts);
-    Expression::new_unary_expression(
-      SPAN,
-      UnaryOperator::LogicalNot,
-      member_expr,
-      self,
-    )
+    Expression::new_unary_expression(SPAN, UnaryOperator::LogicalNot, member_expr, self)
   }
 
   #[inline]
@@ -2156,27 +2071,18 @@ impl<'a> ScriptAst<'a> {
   //endregion
 
   //region logic
-  pub fn new_or_expression(&self, expressions: impl IntoIterator<Item = Expression<'a>>) -> Expression<'a> {
+  pub fn new_or_expression(
+    &self,
+    expressions: impl IntoIterator<Item = Expression<'a>>,
+  ) -> Expression<'a> {
     let mut iter = expressions.into_iter();
     let first = iter.next().expect("最少传入两个表达式");
     let second = iter.next().expect("最少传入两个表达式");
 
-    let mut or = Expression::new_logical_expression(
-      SPAN,
-      first,
-      LogicalOperator::Or,
-      second,
-      self,
-    );
+    let mut or = Expression::new_logical_expression(SPAN, first, LogicalOperator::Or, second, self);
 
     for expr in iter {
-      or = Expression::new_logical_expression(
-        SPAN,
-        or,
-        LogicalOperator::Or,
-        expr,
-        self,
-      )
+      or = Expression::new_logical_expression(SPAN, or, LogicalOperator::Or, expr, self)
     }
 
     or
@@ -2411,24 +2317,38 @@ mod tests {
   fn test_add_const_reactive_object() {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
-    script_ast.add_const_reactive_object("a", &["UserInfo"], [
-      script_ast.new_decimal_object_property("pageNum", 1.0),
-      script_ast.new_undefined_object_property("a"),
-    ]);
+    script_ast.add_const_reactive_object(
+      "a",
+      &["UserInfo"],
+      [
+        script_ast.new_decimal_object_property("pageNum", 1.0),
+        script_ast.new_undefined_object_property("a"),
+      ],
+    );
     let actual_code = script_ast.get_code();
-    assert_eq!(actual_code, "const a: UserInfo = reactive({\n  pageNum: 1,\n  a: undefined\n});\n");
+    assert_eq!(
+      actual_code,
+      "const a: UserInfo = reactive({\n  pageNum: 1,\n  a: undefined\n});\n"
+    );
   }
 
   #[test]
   fn test_add_const_reactive_object_generic_type() {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
-    script_ast.add_const_reactive_object("a", &["TheType", "UserInfo"], [
-      script_ast.new_decimal_object_property("pageNum", 1.0),
-      script_ast.new_undefined_object_property("a"),
-    ]);
+    script_ast.add_const_reactive_object(
+      "a",
+      &["TheType", "UserInfo"],
+      [
+        script_ast.new_decimal_object_property("pageNum", 1.0),
+        script_ast.new_undefined_object_property("a"),
+      ],
+    );
     let actual_code = script_ast.get_code();
-    assert_eq!(actual_code, "const a: TheType<UserInfo> = reactive({\n  pageNum: 1,\n  a: undefined\n});\n");
+    assert_eq!(
+      actual_code,
+      "const a: TheType<UserInfo> = reactive({\n  pageNum: 1,\n  a: undefined\n});\n"
+    );
   }
 
   #[test]
@@ -2437,7 +2357,10 @@ mod tests {
     let mut script_ast = ScriptAst::new(&allocator);
     script_ast.add_const_use_template_ref("inputRef");
     let actual_code = script_ast.get_code();
-    assert_eq!(actual_code, "const inputRef = useTemplateRef(\"inputRef\");\n");
+    assert_eq!(
+      actual_code,
+      "const inputRef = useTemplateRef(\"inputRef\");\n"
+    );
   }
 
   #[test]
@@ -2561,7 +2484,8 @@ mod tests {
   fn test_new_set_member_identifier_value() {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
-    let expression = script_ast.new_set_member_identifier_value(&["a", "b", "[c]"], &["d", "e", "[0]"]);
+    let expression =
+      script_ast.new_set_member_identifier_value(&["a", "b", "[c]"], &["d", "e", "[0]"]);
     script_ast.append_to_root(expression);
     let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "a.b[\"c\"] = d.e[0];\n");
@@ -2670,12 +2594,7 @@ mod tests {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
 
-    script_ast.add_api_function(
-      "fetchDataList",
-      [],
-      &[],
-      []
-    );
+    script_ast.add_api_function("fetchDataList", [], &[], []);
 
     let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "export function fetchDataList(): Promise {}\n");
@@ -2690,7 +2609,10 @@ mod tests {
     script_ast.append_to_root(statement);
 
     let actual_code = script_ast.get_code();
-    assert_eq!(actual_code, "const { rows, total } = await fetchDataList(queryParams.value);\n");
+    assert_eq!(
+      actual_code,
+      "const { rows, total } = await fetchDataList(queryParams.value);\n"
+    );
   }
 
   // id 的类型，不固定为 number, 根据 id 的数据类型推导
@@ -2806,10 +2728,13 @@ mod tests {
   fn test_add_union_type_alias() {
     let allocator = Allocator::new();
     let mut script_ast = ScriptAst::new(&allocator);
-    let promise_user_type = script_ast.add_union_type_alias("NewType", [
-      script_ast.new_ts_number_type(),
-      script_ast.new_ts_array_number_type()
-    ]);
+    let promise_user_type = script_ast.add_union_type_alias(
+      "NewType",
+      [
+        script_ast.new_ts_number_type(),
+        script_ast.new_ts_array_number_type(),
+      ],
+    );
     script_ast.append_to_root(promise_user_type);
     let actual_code = script_ast.get_code();
     assert_eq!(actual_code, "type NewType = number | number[];\n");

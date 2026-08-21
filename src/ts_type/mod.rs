@@ -1,7 +1,7 @@
+use crate::db_types::{DbColumn, DbTableStructure};
+use crate::types::CodeGenerateResult;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use crate::db_types::{DbTableStructure, DbColumn };
-use crate::types::CodeGenerateResult;
 
 /// 新增一个 typescript d.ts 文件
 /// ## Parameters
@@ -16,6 +16,5 @@ pub fn add_ts_types(
   page_name: Option<String>,
   query_columns: Vec<DbColumn>,
 ) -> Result<CodeGenerateResult> {
-
-  Ok(CodeGenerateResult {files: vec![]})
+  Ok(CodeGenerateResult { files: vec![] })
 }

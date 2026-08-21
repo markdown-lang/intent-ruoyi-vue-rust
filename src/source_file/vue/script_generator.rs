@@ -1,14 +1,13 @@
-use heck::{ToLowerCamelCase, ToUpperCamelCase};
-use napi::Either;
-use oxc_allocator::{Allocator};
-use oxc_ast::ast::ObjectPropertyKind;
 use crate::db_types::{DbTableStructure, Form, MatchOperation, TableParamSlot};
 use crate::source_file::script_ast::ScriptAst;
+use heck::{ToLowerCamelCase, ToUpperCamelCase};
+use napi::Either;
+use oxc_allocator::Allocator;
+use oxc_ast::ast::ObjectPropertyKind;
+use crate::ui_types::PageInfo;
 
 pub fn get_sfc_script_code(
-  parent_keys: &[&str],
-  page_key: String,
-  page_name: String,
+  page_info: PageInfo,
   dict_names: &[&str],
   main_table: DbTableStructure,
   sub_tables: Vec<DbTableStructure>,
@@ -18,6 +17,12 @@ pub fn get_sfc_script_code(
   let allocator = Allocator::new();
   let mut script_ast = ScriptAst::new(&allocator);
 
+  let PageInfo {
+    page_key,
+    page_name,
+    parent_keys,
+  } = page_info;
+
   let upper_page_key = page_key.to_upper_camel_case();
 
   let type_import_source = format!("@/types/api/{}/{}", parent_keys.join("/"), page_key);
@@ -25,10 +30,7 @@ pub fn get_sfc_script_code(
   let table_type_name = main_table.table.to_entity_class_name();
   script_ast.add_import_named_type(
     type_import_source.as_str(),
-    &[
-      table_type_name.as_str(),
-      params_type_name.as_str()
-    ]
+    &[table_type_name.as_str(), params_type_name.as_str()],
   );
 
   let api_import_source = format!("@/api/{}/{}", parent_keys.join("/"), page_key);
@@ -44,8 +46,8 @@ pub fn get_sfc_script_code(
       fetch_one_data_by_id_method_name.as_str(),
       add_one_data_method_name.as_str(),
       update_one_data_by_id_method_name.as_str(),
-      delete_one_data_by_id_method_name.as_str()
-    ]
+      delete_one_data_by_id_method_name.as_str(),
+    ],
   );
 
   script_ast.add_call_use_dict(dict_names);
@@ -60,15 +62,16 @@ pub fn get_sfc_script_code(
   script_ast.add_const_ref_boolean("multiple", true);
   script_ast.add_const_ref_number("total", 0.0);
   script_ast.add_const_ref_string("title", "");
-  
+
   // queryParams
   if let Some(table_param_slot) = &table_param_slot {
     let date_range_fields = table_param_slot.get_date_range_fields();
     for date_field in date_range_fields {
-      let date_range_name = allocator.alloc_str(format!("dateRange{}", date_field.to_upper_camel_case()).as_str());
+      let date_range_name =
+        allocator.alloc_str(format!("dateRange{}", date_field.to_upper_camel_case()).as_str());
       script_ast.add_const_ref_string_array(date_range_name);
     }
-    
+
     let mut query_params_properties = vec![
       script_ast.new_decimal_object_property("pageNum", 1.0),
       script_ast.new_decimal_object_property("pageSize", 10.0),
@@ -90,7 +93,11 @@ pub fn get_sfc_script_code(
 
     let table_param_name = allocator.alloc_str(table_param_slot.name.as_str());
     // FIXME: 此处使用 table 的表名，是不是属于少了一层推导?
-    script_ast.add_const_ref_object(table_param_name, params_type_name.as_str(), query_params_properties);
+    script_ast.add_const_ref_object(
+      table_param_name,
+      params_type_name.as_str(),
+      query_params_properties,
+    );
   }
 
   // form
@@ -100,23 +107,26 @@ pub fn get_sfc_script_code(
 
     let mut property_rules = vec![];
     for field in &form.fields {
-      if let Some(rule_info) = field.get_rule_info() {
-        if rule_info.required {
-          let property = allocator.alloc_str(rule_info.property);
-          let message = allocator.alloc_str(format!("{}不能为空", rule_info.label).as_str());
-          let property_rule = script_ast.new_array_object_property(property, [
-            script_ast.new_array_object_element([
-              script_ast.new_boolean_object_property("required", true),
-              script_ast.new_string_object_property("message", message),
-              script_ast.new_string_object_property("trigger", "blur"),
-            ])
-          ]);
-          property_rules.push(property_rule);
-        }
+      if let Some(rule_info) = field.get_rule_info() && rule_info.required {
+        let property = allocator.alloc_str(rule_info.property);
+        let message = allocator.alloc_str(format!("{}不能为空", rule_info.label).as_str());
+        let property_rule = script_ast.new_array_object_property(
+          property,
+          [script_ast.new_array_object_element([
+            script_ast.new_boolean_object_property("required", true),
+            script_ast.new_string_object_property("message", message),
+            script_ast.new_string_object_property("trigger", "blur"),
+          ])],
+        );
+        property_rules.push(property_rule);
       }
     }
 
-    script_ast.add_const_reactive_object("rules", &["FormRules", table_type_name.as_str()], property_rules);
+    script_ast.add_const_reactive_object(
+      "rules",
+      &["FormRules", table_type_name.as_str()],
+      property_rules,
+    );
   }
 
   script_ast.add_const_use_template_ref("queryRef");
@@ -133,41 +143,60 @@ pub fn get_sfc_script_code(
     }
     let date_range_fields = table_param_slot.get_date_range_fields();
     for date_field in date_range_fields {
-      let date_range_name = allocator.alloc_str(format!("dateRange{}", date_field.to_upper_camel_case()).as_str());
-      let begin_params = allocator.alloc_str(format!("[begin{}]", date_field.to_upper_camel_case()).as_str());
-      let end_params = allocator.alloc_str(format!("[end{}]", date_field.to_upper_camel_case()).as_str());
+      let date_range_name =
+        allocator.alloc_str(format!("dateRange{}", date_field.to_upper_camel_case()).as_str());
+      let begin_params =
+        allocator.alloc_str(format!("[begin{}]", date_field.to_upper_camel_case()).as_str());
+      let end_params =
+        allocator.alloc_str(format!("[end{}]", date_field.to_upper_camel_case()).as_str());
       try_statements.push(script_ast.new_if_statement(
         script_ast.new_check_ref_value_is_blank(date_range_name),
         [
-          script_ast.new_set_member_identifier_value(&[table_param_name, "value", "params", begin_params], &[date_range_name, "value", "[0]"]),
-          script_ast.new_set_member_identifier_value(&[table_param_name, "value", "params", end_params], &[date_range_name, "value", "[1]"]),
-        ]
+          script_ast.new_set_member_identifier_value(
+            &[table_param_name, "value", "params", begin_params],
+            &[date_range_name, "value", "[0]"],
+          ),
+          script_ast.new_set_member_identifier_value(
+            &[table_param_name, "value", "params", end_params],
+            &[date_range_name, "value", "[1]"],
+          ),
+        ],
       ));
     }
-    let fetch_data_list_api_name = allocator.alloc_str(format!("fetch{}List", upper_page_key).as_str());
-    try_statements.push(script_ast.new_call_fetch_data_list_api(fetch_data_list_api_name, table_param_name));
-    try_statements.push(script_ast.new_set_ref_identifier_value(data_list_var_name.as_str(), "rows"));
+    let fetch_data_list_api_name =
+      allocator.alloc_str(format!("fetch{}List", upper_page_key).as_str());
+    try_statements
+      .push(script_ast.new_call_fetch_data_list_api(fetch_data_list_api_name, table_param_name));
+    try_statements
+      .push(script_ast.new_set_ref_identifier_value(data_list_var_name.as_str(), "rows"));
     try_statements.push(script_ast.new_set_ref_identifier_value("total", "total"));
 
-    script_ast.add_arrow_async_function("getList", [], [
-      script_ast.new_set_ref_boolean_value("loading", true),
-      script_ast.new_try_catch_finally_statement(try_statements, [
-        script_ast.new_call_console_error([
-          script_ast.new_argument_identifier("e")
-        ])
-      ], [
-        script_ast.new_set_ref_boolean_value("loading", false),
-      ]),
-    ]);
+    script_ast.add_arrow_async_function(
+      "getList",
+      [],
+      [
+        script_ast.new_set_ref_boolean_value("loading", true),
+        script_ast.new_try_catch_finally_statement(
+          try_statements,
+          [script_ast.new_call_console_error([script_ast.new_argument_identifier("e")])],
+          [script_ast.new_set_ref_boolean_value("loading", false)],
+        ),
+      ],
+    );
 
     // cancel
-    script_ast.add_arrow_function("cancel", [], [
-      script_ast.new_set_ref_boolean_value("open", false),
-      script_ast.new_call_function("reset", []),
-    ]);
+    script_ast.add_arrow_function(
+      "cancel",
+      [],
+      [
+        script_ast.new_set_ref_boolean_value("open", false),
+        script_ast.new_call_function("reset", []),
+      ],
+    );
 
     //reset
-    let reset_form_properties: Vec<ObjectPropertyKind> = main_table.columns
+    let reset_form_properties: Vec<ObjectPropertyKind> = main_table
+      .columns
       .iter()
       .filter(|column| !column.is_audit_field())
       .map(|column| {
@@ -175,110 +204,151 @@ pub fn get_sfc_script_code(
         script_ast.new_undefined_object_property(field_name)
       })
       .collect();
-    script_ast.add_arrow_function("reset", [], [
-      script_ast.new_set_ref_object_value("form", reset_form_properties),
-      script_ast.new_call_member_method(&[form_ref_key.as_str(), "value?"], "resetFields", []),
-    ]);
+    script_ast.add_arrow_function(
+      "reset",
+      [],
+      [
+        script_ast.new_set_ref_object_value("form", reset_form_properties),
+        script_ast.new_call_member_method(&[form_ref_key.as_str(), "value?"], "resetFields", []),
+      ],
+    );
 
     // handleQuery
-    script_ast.add_arrow_function("handleQuery", [], [
-      script_ast.new_set_member_number_value(&[table_param_name, "value", "pageNum"], 1.0),
-      script_ast.new_call_function("getList", []),
-    ]);
+    script_ast.add_arrow_function(
+      "handleQuery",
+      [],
+      [
+        script_ast.new_set_member_number_value(&[table_param_name, "value", "pageNum"], 1.0),
+        script_ast.new_call_function("getList", []),
+      ],
+    );
 
     // resetQuery
     let mut reset_query_body_statements = vec![];
     let date_range_fields = table_param_slot.get_date_range_fields();
     for date_field in date_range_fields {
-      let date_range_name = allocator.alloc_str(format!("dateRange{}", date_field.to_upper_camel_case()).as_str());
+      let date_range_name =
+        allocator.alloc_str(format!("dateRange{}", date_field.to_upper_camel_case()).as_str());
       reset_query_body_statements.push(script_ast.new_set_ref_array_empty_value(date_range_name));
     }
-    reset_query_body_statements.push(script_ast.new_call_member_method(&["queryRef", "value?"], "resetFields", []));
+    reset_query_body_statements.push(script_ast.new_call_member_method(
+      &["queryRef", "value?"],
+      "resetFields",
+      [],
+    ));
     reset_query_body_statements.push(script_ast.new_call_function("handleQuery", []));
     script_ast.add_arrow_function("resetQuery", [], reset_query_body_statements);
-
   }
 
   // handleSelectionChange
-  let primary_column_name = main_table.get_primary_key_column_name().to_lower_camel_case();
+  let primary_column_name = main_table
+    .get_primary_key_column_name()
+    .to_lower_camel_case();
   let non_null_primary_column_name = format!("{}!", primary_column_name);
-  script_ast.add_arrow_function("handleSelectionChange", [
-    script_ast.new_formal_array_parameter("selection", table_type_name.as_str()),
-  ], [
-    script_ast.new_set_ref_expression_value(
-      "ids",
-      script_ast.new_call_object_method_expression(
-        "selection",
-        "map",
-        [script_ast.new_argument_arrow_function_member_expression(
-          [script_ast.new_formal_parameter("item")],
-          "item",
-          non_null_primary_column_name.as_str()
-        )]
-      )
-    ),
-    script_ast.new_set_ref_expression_value("single", script_ast.new_member_not_equal_number(&["selection", "length"], 1.0)),
-    script_ast.new_set_ref_expression_value("multiple", script_ast.new_member_not(&["selection", "length"])),
-  ]);
+  script_ast.add_arrow_function(
+    "handleSelectionChange",
+    [script_ast.new_formal_array_parameter("selection", table_type_name.as_str())],
+    [
+      script_ast.new_set_ref_expression_value(
+        "ids",
+        script_ast.new_call_object_method_expression(
+          "selection",
+          "map",
+          [script_ast.new_argument_arrow_function_member_expression(
+            [script_ast.new_formal_parameter("item")],
+            "item",
+            non_null_primary_column_name.as_str(),
+          )],
+        ),
+      ),
+      script_ast.new_set_ref_expression_value(
+        "single",
+        script_ast.new_member_not_equal_number(&["selection", "length"], 1.0),
+      ),
+      script_ast.new_set_ref_expression_value(
+        "multiple",
+        script_ast.new_member_not(&["selection", "length"]),
+      ),
+    ],
+  );
 
   // handleAdd
   let add_title = format!("添加{}", page_name);
-  script_ast.add_arrow_function("handleAdd", [], [
-    script_ast.new_call_function("reset", []),
-    script_ast.new_set_ref_boolean_value("open", true),
-    script_ast.new_set_ref_string_value("title", add_title.as_str())
-  ]);
+  script_ast.add_arrow_function(
+    "handleAdd",
+    [],
+    [
+      script_ast.new_call_function("reset", []),
+      script_ast.new_set_ref_boolean_value("open", true),
+      script_ast.new_set_ref_string_value("title", add_title.as_str()),
+    ],
+  );
 
   // handleUpdate
   let update_title = format!("修改{}", page_name);
-  script_ast.add_arrow_async_function("handleUpdate", [
-    script_ast.new_formal_type_parameter("row", table_type_name.as_str()),
-  ], [
-    script_ast.new_call_function("reset", []),
-    script_ast.new_const_expression(primary_column_name.as_str(), script_ast.new_or_expression([
-      script_ast.new_right_member_expression(&["row", primary_column_name.as_str()]),
-      script_ast.new_right_member_expression(&["ids", "[0]"]),
-    ])),
-    script_ast.new_call_fetch_one_data_by_id_api(fetch_one_data_by_id_method_name.as_str(), primary_column_name.as_str()),
-    script_ast.new_set_ref_identifier_value("form", "data"),
-    script_ast.new_set_ref_boolean_value("open", true),
-    script_ast.new_set_ref_string_value("title", update_title.as_str()),
-  ]);
+  script_ast.add_arrow_async_function(
+    "handleUpdate",
+    [script_ast.new_formal_type_parameter("row", table_type_name.as_str())],
+    [
+      script_ast.new_call_function("reset", []),
+      script_ast.new_const_expression(
+        primary_column_name.as_str(),
+        script_ast.new_or_expression([
+          script_ast.new_right_member_expression(&["row", primary_column_name.as_str()]),
+          script_ast.new_right_member_expression(&["ids", "[0]"]),
+        ]),
+      ),
+      script_ast.new_call_fetch_one_data_by_id_api(
+        fetch_one_data_by_id_method_name.as_str(),
+        primary_column_name.as_str(),
+      ),
+      script_ast.new_set_ref_identifier_value("form", "data"),
+      script_ast.new_set_ref_boolean_value("open", true),
+      script_ast.new_set_ref_string_value("title", update_title.as_str()),
+    ],
+  );
 
   // submitForm
   if let Some(form) = &form {
     let form_name = allocator.alloc_str(form.name.as_str());
-    script_ast.add_arrow_async_function("submitForm", [], [
-      script_ast.new_try_catch_statement(
+    script_ast.add_arrow_async_function(
+      "submitForm",
+      [],
+      [script_ast.new_try_catch_statement(
         [
           script_ast.new_call_form_validate(form_ref_key.as_str()),
           script_ast.new_if_else_statement(
-            script_ast.new_check_member_is_not_undefined(&[form_name, "value", primary_column_name.as_str()]),
+            script_ast.new_check_member_is_not_undefined(&[
+              form_name,
+              "value",
+              primary_column_name.as_str(),
+            ]),
             [
-              script_ast.new_call_save_one_data_api(update_one_data_by_id_method_name.as_str(), form_name),
+              script_ast
+                .new_call_save_one_data_api(update_one_data_by_id_method_name.as_str(), form_name),
               script_ast.new_call_msg_success("修改成功"),
             ],
             [
               script_ast.new_call_save_one_data_api(add_one_data_method_name.as_str(), form_name),
               script_ast.new_call_msg_success("新增成功"),
-            ]
+            ],
           ),
           script_ast.new_set_ref_boolean_value("open", false),
           script_ast.new_call_function("getList", []),
-        ], [
-          script_ast.new_call_console_error([
-            script_ast.new_argument_string("提交失败"),
-            script_ast.new_argument_identifier("e"),
-          ]),
-        ]),
-    ]);
+        ],
+        [script_ast.new_call_console_error([
+          script_ast.new_argument_string("提交失败"),
+          script_ast.new_argument_identifier("e"),
+        ])],
+      )],
+    );
   }
 
   // handleDelete
   let ids_name = format!("{}Ids", page_key);
   script_ast.add_arrow_async_function(
     "handleDelete",
-    [script_ast.new_formal_type_parameter("row", table_type_name.as_str()),],
+    [script_ast.new_formal_type_parameter("row", table_type_name.as_str())],
     [
       script_ast.new_const_expression(
         ids_name.as_str(),
@@ -290,18 +360,19 @@ pub fn get_sfc_script_code(
       script_ast.new_try_catch_statement(
         [
           script_ast.new_call_confirm("确定要删除吗？"),
-          script_ast.new_call_delete_one_data_by_id(delete_one_data_by_id_method_name.as_str(), ids_name.as_str()),
+          script_ast.new_call_delete_one_data_by_id(
+            delete_one_data_by_id_method_name.as_str(),
+            ids_name.as_str(),
+          ),
           script_ast.new_call_function("getList", []),
           script_ast.new_call_msg_success("删除成功"),
         ],
-        [
-          script_ast.new_call_console_error([
-            script_ast.new_argument_string("删除取消或删除失败"),
-            script_ast.new_argument_identifier("e"),
-          ]),
-        ]
+        [script_ast.new_call_console_error([
+          script_ast.new_argument_string("删除取消或删除失败"),
+          script_ast.new_argument_identifier("e"),
+        ])],
       ),
-    ]
+    ],
   );
 
   //endregion
@@ -311,9 +382,12 @@ pub fn get_sfc_script_code(
 
 #[cfg(test)]
 mod tests {
-  use napi::Either;
-  use crate::db_types::{DbColumn, DbDataType, DbTable, FormField, FormNumberInput, FormTextInput, MatchOperation, TableParamItem};
   use super::*;
+  use crate::db_types::{
+    DbColumn, DbDataType, DbTable, FormField, FormNumberInput, FormTextInput, MatchOperation,
+    TableParamItem,
+  };
+  use napi::Either;
 
   #[test]
   fn test_get_sfc_script_code() {
@@ -367,7 +441,7 @@ mod tests {
           ui_unit_name: None,
           after_column_name: None,
           table_name: None,
-        }
+        },
       ],
       unique_constraints: vec![],
       foreign_constraints: vec![],
@@ -375,57 +449,57 @@ mod tests {
     let table_param_slot = TableParamSlot {
       name: "queryParams".to_string(),
       children: vec![
-        Either::A(
-          TableParamItem {
-            property: "column1".to_string(),
-            operation: MatchOperation::Contains,
-            db_data_type: DbDataType::Varchar,
-          }
-        ),
-        Either::A(
-          TableParamItem {
-            property: "column2".to_string(),
-            operation: MatchOperation::Contains,
-            db_data_type: DbDataType::Varchar,
-          }
-        ),
-        Either::A(
-          TableParamItem {
-            property: "theDate1".to_string(),
-            operation: MatchOperation::Between,
-            db_data_type: DbDataType::Date,
-          }
-        ),
-        Either::A(
-          TableParamItem {
-            property: "theDate2".to_string(),
-            operation: MatchOperation::Between,
-            db_data_type: DbDataType::Date,
-          }
-        ),
+        Either::A(TableParamItem {
+          property: "column1".to_string(),
+          operation: MatchOperation::Contains,
+          db_data_type: DbDataType::Varchar,
+        }),
+        Either::A(TableParamItem {
+          property: "column2".to_string(),
+          operation: MatchOperation::Contains,
+          db_data_type: DbDataType::Varchar,
+        }),
+        Either::A(TableParamItem {
+          property: "theDate1".to_string(),
+          operation: MatchOperation::Between,
+          db_data_type: DbDataType::Date,
+        }),
+        Either::A(TableParamItem {
+          property: "theDate2".to_string(),
+          operation: MatchOperation::Between,
+          db_data_type: DbDataType::Date,
+        }),
       ],
     };
     let form = Form {
       name: "form".to_string(),
-      fields: vec![FormField::TextInput(FormTextInput {
-        property: "field1".to_string(),
-        label: "字段1".to_string(),
-        required: true,
-      }), FormField::TextInput(FormTextInput {
-        property: "field2".to_string(),
-        label: "字段2".to_string(),
-        required: false,
-      }), FormField::NumberInput(FormNumberInput {
-        property: "field3".to_string(),
-        label: "字段3".to_string(),
-        required: true,
-      })],
+      fields: vec![
+        FormField::TextInput(FormTextInput {
+          property: "field1".to_string(),
+          label: "字段1".to_string(),
+          required: true,
+        }),
+        FormField::TextInput(FormTextInput {
+          property: "field2".to_string(),
+          label: "字段2".to_string(),
+          required: false,
+        }),
+        FormField::NumberInput(FormNumberInput {
+          property: "field3".to_string(),
+          label: "字段3".to_string(),
+          required: true,
+        }),
+      ],
+    };
+
+    let page_info = PageInfo {
+      parent_keys: vec!["group1".to_string()],
+      page_key: "demo".to_string(),
+      page_name: "示例".to_string(),
     };
 
     let actual_code = get_sfc_script_code(
-      &["group1"],
-      "demo".to_string(),
-      "示例".to_string(),
+      page_info,
       &["dict_1", "dict_2"],
       db_table_structure,
       vec![DbTableStructure {

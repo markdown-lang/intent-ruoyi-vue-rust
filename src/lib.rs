@@ -1,16 +1,16 @@
 #![deny(clippy::all)]
 
 mod db_table_info;
+mod db_types;
 mod json_loader;
 mod menu_group;
 mod menu_item;
 mod quick_xml_util;
 mod source_file;
+mod ts_type;
 mod types;
 mod ui_types;
 mod vue_script;
-mod ts_type;
-mod db_types;
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;

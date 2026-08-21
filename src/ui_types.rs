@@ -1,8 +1,12 @@
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
-
-
+#[napi]
+pub struct PageInfo {
+  pub parent_keys: Vec<String>,
+  pub page_key: String,
+  pub page_name: String,
+}
 
 // 以下代码是 AI 生成，仅供参考
 // ==================== 基础通用类型 ====================
