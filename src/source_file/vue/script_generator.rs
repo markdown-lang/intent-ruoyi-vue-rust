@@ -274,6 +274,35 @@ pub fn get_sfc_script_code(
     ]);
   }
 
+  // handleDelete
+  let ids_name = format!("{}Ids", page_key);
+  script_ast.add_arrow_async_function(
+    "handleDelete",
+    [script_ast.new_formal_type_parameter("row", table_type_name.as_str()),],
+    [
+      script_ast.new_const_expression(
+        ids_name.as_str(),
+        script_ast.new_or_expression([
+          script_ast.new_right_member_expression(&["row", primary_column_name.as_str()]),
+          script_ast.new_right_member_expression(&["ids", "value"]),
+        ]),
+      ),
+      script_ast.new_try_catch_statement(
+        [
+          script_ast.new_call_confirm("确定要删除吗？"),
+          script_ast.new_call_delete_one_data_by_id(delete_one_data_by_id_method_name.as_str(), ids_name.as_str()),
+          script_ast.new_call_function("getList", []),
+          script_ast.new_call_msg_success("删除成功"),
+        ],
+        [
+          script_ast.new_call_console_error([
+            script_ast.new_argument_string("删除取消或删除失败"),
+            script_ast.new_argument_identifier("e"),
+          ]),
+        ]
+      ),
+    ]
+  );
 
   //endregion
 
@@ -509,6 +538,17 @@ mod tests {
       "    getList();\n", // TODO: 如果是修改数据，则精准更新，不查询整个列表
       "  } catch (e) {\n",
       "    console.error(\"提交失败\", e);\n",
+      "  }\n",
+      "};\n",
+      "const handleDelete = async (row: DemoTable) => {\n",
+      "  const demoIds = row.id || ids.value;\n",
+      "  try {\n",
+      "    await modal.confirm(\"确定要删除吗？\");\n",
+      "    await deleteDemoById(demoIds);\n",
+      "    getList();\n",
+      "    modal.msgSuccess(\"删除成功\");\n",
+      "  } catch (e) {\n",
+      "    console.error(\"删除取消或删除失败\", e);\n",
       "  }\n",
       "};\n",
     );

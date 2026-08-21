@@ -1293,9 +1293,25 @@ impl<'a> ScriptAst<'a> {
   }
 
   pub fn new_call_msg_success(&self, content: &'a str) -> Statement<'a> {
-    self.new_call_object_method_statement("modal", "msgSuccess", [
-      self.new_argument_string(content),
-    ])
+    self.new_call_object_method_statement(
+      "modal",
+      "msgSuccess",
+      [self.new_argument_string(content),]
+    )
+  }
+
+  pub fn new_call_confirm(&self, content: &'a str) -> Statement<'a> {
+    let method_expr = self.new_call_object_method_expression(
+      "modal",
+      "confirm",
+      [self.new_argument_string(content),]
+    );
+    let await_expr = Expression::new_await_expression(
+      SPAN,
+      method_expr,
+      self,
+    );
+    Statement::new_expression_statement(SPAN, await_expr, self)
   }
   //endregion
 
@@ -1771,6 +1787,33 @@ impl<'a> ScriptAst<'a> {
       self,
     );
     let call_args = ArenaVec::from_value_in(param_expr, self);
+
+    let await_arg= Expression::new_call_expression(
+      SPAN,
+      callee,
+      None,
+      call_args,
+      false,
+      self,
+    );
+
+    let right_expr = Expression::new_await_expression(
+      SPAN,
+      await_arg,
+      self,
+    );
+
+    Statement::new_expression_statement(
+      SPAN,
+      right_expr,
+      self,
+    )
+  }
+
+  pub fn new_call_delete_one_data_by_id(&self, function_name: &'a str, ids_param_name: &'a str) -> Statement<'a> {
+    let callee = Expression::new_identifier(SPAN, function_name, self);
+    let id_ident = self.new_argument_identifier(ids_param_name);
+    let call_args = ArenaVec::from_value_in(id_ident, self);
 
     let await_arg= Expression::new_call_expression(
       SPAN,
