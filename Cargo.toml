@@ -21,6 +21,7 @@ oxc_ast = "0.146.0"
 oxc_codegen = "0.146.0"
 oxc_span = "0.146.0"
 oxc_parser = "0.146.0"
+git2 = "0.21.0"
 
 [dependencies.serde]
 version = "1"
