@@ -3,6 +3,7 @@
 mod db_table_info;
 mod db_types;
 mod json_loader;
+mod maven;
 mod menu_group;
 mod menu_item;
 mod quick_xml_util;

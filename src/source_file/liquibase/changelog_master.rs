@@ -45,10 +45,10 @@ fn add_include_tag(changelog_file_path: &str, include_file_path_list: &[&str]) -
 
   loop {
     match reader.read_event_into(&mut buf) {
-      Ok(Event::Start(ref e)) if e.name().as_ref() == b"databaseChangeLog" => {
+      Ok(Event::Start(e)) if e.name().as_ref() == "databaseChangeLog" => {
         writer.write_event(Event::Start(e.clone()))?;
       }
-      Ok(Event::End(ref e)) if e.name().as_ref() == b"databaseChangeLog" => {
+      Ok(Event::End(e)) if e.name().as_ref() == "databaseChangeLog" => {
         for &include_file_path in include_file_path_list {
           writer.write_event(Event::Text(BytesText::new("    ")))?;
           // 在关闭标签前添加新的 include 节点
