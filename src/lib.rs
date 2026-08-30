@@ -2,8 +2,8 @@
 
 mod db_table_info;
 mod db_types;
+mod java_project;
 mod json_loader;
-mod maven;
 mod menu_group;
 mod menu_item;
 mod quick_xml_util;
@@ -13,8 +13,10 @@ mod types;
 mod ui_types;
 mod vue_script;
 
+use crate::types::into_napi;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
+use std::path::Path;
 
 #[napi]
 pub fn plus_100(input: u32) -> u32 {
@@ -29,4 +31,44 @@ pub fn sum(a: i32, b: i32) -> i32 {
 #[napi]
 pub fn create_my_batis_xml() -> Result<String> {
   Ok("".to_string())
+}
+
+/// 判断当前目录是不是多模块的 maven 项目
+#[napi]
+pub fn is_maven_multiple_module_project(project_root_path: String) -> bool {
+  java_project::maven::is_multiple_module_project(project_root_path.as_str())
+}
+
+#[napi]
+pub fn new_maven_module(
+  project_root_dir: String,
+  module_name: String,
+  module_description: String,
+  base_package: String,
+  ruoyi_version: String,
+) -> Result<String> {
+  java_project::module::new_module(
+    project_root_dir.as_ref(),
+    module_name.as_str(),
+    module_description.as_str(),
+    base_package.as_str(),
+    ruoyi_version.as_str(),
+  )
+  .map_err(into_napi)
+}
+
+#[napi]
+pub fn support_liquibase(
+  project_root_dir: String,
+  module_name: String,
+  base_package: String,
+  author: String,
+) -> Result<String> {
+  java_project::liquibase_addon::support_liquibase(
+    project_root_dir.as_ref(),
+    module_name.as_str(),
+    base_package.as_str(),
+    author.as_str(),
+  )
+  .map_err(into_napi)
 }

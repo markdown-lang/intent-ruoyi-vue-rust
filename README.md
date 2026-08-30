@@ -7,6 +7,10 @@ cargo fmt
 cargo clippy
 ```
 
+在 git commit message 中只填写版本号，则 github 会自动发版
+1. `Cargo.toml` 中的 `version`
+2. `package.json` 中的 `version`
+
 ## 使用 rust 生成以下代码
 
 1. TypeScript Interface

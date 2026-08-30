@@ -1,12 +1,13 @@
 use quick_xml::Reader;
 use quick_xml::events::Event;
 use std::path::Path;
+
 // 如果文件夹不存在，返回false
 // 如果项目根目录下没有 pom.xml 文件，返回 false
 // 如果 pom.xml 中的 packaging 的值不是 pom，返回 false
 // 如果存在 modules 节点，返回 true
 // 返回 false
-pub fn is_maven_multiple_module_project(project_root_path: &str) -> bool {
+pub fn is_multiple_module_project(project_root_path: &str) -> bool {
   let root_dir = Path::new(project_root_path);
   if !root_dir.is_dir() {
     return false;
