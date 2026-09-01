@@ -28,15 +28,15 @@ pub enum UIParagraphType {
   Changelog,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[napi(string_enum)]
-pub enum MatchOperation {
-  Contains,
-  Equal,
-  Between,
-  ItemEqual,
-  ItemContains,
-}
+// #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+// #[napi(string_enum)]
+// pub enum MatchOperation {
+//   Contains,
+//   Equal,
+//   Between,
+//   ItemEqual,
+//   ItemContains,
+// }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[napi(string_enum)]

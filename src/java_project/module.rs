@@ -8,9 +8,8 @@ use std::path::{Path, PathBuf};
 pub fn new_module(
   project_root_dir: &Path,
   module_name: &str,
-  module_description: &str,
+  module_description: Option<String>,
   base_package: &str,
-  ruoyi_version: &str,
 ) -> Result<String> {
   let module_path = project_root_dir.join(module_name);
 
@@ -25,29 +24,116 @@ pub fn new_module(
     fs::create_dir_all(dir)?;
   }
 
-  new_module_pom_xml(module_name, module_description, ruoyi_version, &module_path)?;
-  update_root_pom_xml(project_root_dir, module_name, module_description)?;
-  update_ruoyi_admin_pom_xml(project_root_dir, module_name, module_description)?;
+  let description = module_description.unwrap_or("".to_string());
+  let description = description.as_str();
+
+  let root_pom_gav = read_root_pom_gav(project_root_dir);
+  if let Some(root_pom_gav) = root_pom_gav {
+    new_module_pom_xml(module_name, description, root_pom_gav, &module_path)?;
+  }
+
+  update_root_pom_xml(project_root_dir, module_name, description)?;
+  update_ruoyi_admin_pom_xml(project_root_dir, module_name, description)?;
   new_biz_entity_java(&module_path, base_package)?;
 
   Ok("".to_string())
 }
 
+/// pom 构件坐标
+struct ArtifactCoordinates {
+  group_id: String,
+  artifact_id: String,
+  version: String,
+}
+
+fn read_root_pom_gav(project_root_dir: &Path) -> Option<ArtifactCoordinates> {
+  let root_pom_path = project_root_dir.join("pom.xml");
+  if !root_pom_path.exists() {
+    return None;
+  }
+  let mut root_pom_reader = match Reader::from_file(&root_pom_path) {
+    Ok(r) => r,
+    Err(_) => return None,
+  };
+  root_pom_reader.config_mut().trim_text(false);
+  let mut buf = Vec::new();
+
+  let mut in_project = false;
+
+  let mut in_group_id = false;
+  let mut in_artifact_id = false;
+  let mut in_version = false;
+
+  let mut group_id = None;
+  let mut artifact_id = None;
+  let mut version = None;
+
+  loop {
+    match root_pom_reader.read_event_into(&mut buf) {
+      Ok(Event::Start(e)) => match e.name().as_ref() {
+        "project" => in_project = true,
+        "groupId" if in_project => in_group_id = true,
+        "artifactId" if in_project => in_artifact_id = true,
+        "version" if in_project => in_version = true,
+        _ => {}
+      },
+      Ok(Event::Text(e)) => {
+        let txt = e.xml10_content();
+        if in_group_id {
+          group_id = Some(txt.to_string());
+        }
+        if in_artifact_id {
+          artifact_id = Some(txt.to_string());
+        }
+        if in_version {
+          version = Some(txt.to_string());
+        }
+      }
+      Ok(Event::End(e)) => match e.name().as_ref() {
+        "project" => in_project = false,
+        "groupId" => in_group_id = false,
+        "artifactId" => in_artifact_id = false,
+        "version" => in_version = false,
+        _ => {}
+      },
+      Ok(Event::Eof) => break,
+      Ok(e) => return None,
+      Err(e) => return None,
+    }
+
+    if group_id.is_some() && artifact_id.is_some() && version.is_some() {
+      break;
+    }
+
+    buf.clear();
+  }
+
+  Some(ArtifactCoordinates {
+    group_id: group_id.unwrap(),
+    artifact_id: artifact_id.unwrap(),
+    version: version.unwrap(),
+  })
+}
+
 fn new_module_pom_xml(
   module_name: &str,
   module_description: &str,
-  ruoyi_version: &str,
+  root_pom_gav: ArtifactCoordinates,
   module_path: &Path,
 ) -> Result<()> {
+  let parent_artifact_id = root_pom_gav.artifact_id;
+  let parent_group_id = root_pom_gav.group_id;
+  let parent_version = root_pom_gav.version;
+
   let pom_content = format!(
     r#"<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>ruoyi</artifactId>
-        <groupId>com.ruoyi</groupId>
-        <version>{ruoyi_version}</version>
+        <artifactId>{parent_artifact_id}</artifactId>
+        <groupId>{parent_group_id}</groupId>
+        <version>{parent_version}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 

@@ -182,13 +182,8 @@ export interface FormTextInput {
 
 export declare function generateVueScript(uiPage: UiPage): string
 
-export declare const enum MatchOperation {
-  Contains = 'Contains',
-  Equal = 'Equal',
-  Between = 'Between',
-  ItemEqual = 'ItemEqual',
-  ItemContains = 'ItemContains'
-}
+/** 判断当前目录是不是多模块的 maven 项目 */
+export declare function isMavenMultipleModuleProject(projectRootPath: string): boolean
 
 export declare const enum MatchOperation {
   Contains = 'Contains',
@@ -234,6 +229,8 @@ export interface MenuItem {
   visible: boolean
 }
 
+export declare function newMavenModule(projectRootDir: string, moduleName: string, basePackage: string, moduleDescription?: string | undefined | null): string
+
 /** 通用数值/字符串联合类型，对应 TS 的 `number | string` */
 export type NumberOrString =
   | { type: 'Number', field0: number }
@@ -250,6 +247,8 @@ export interface QueryParam {
 }
 
 export declare function sum(a: number, b: number): number
+
+export declare function supportLiquibase(projectRootDir: string, moduleName: string, basePackage: string, author: string): string
 
 export interface TableParamActionSlot {
   actions: Array<UIParamActionKey>

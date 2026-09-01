@@ -43,16 +43,14 @@ pub fn is_maven_multiple_module_project(project_root_path: String) -> bool {
 pub fn new_maven_module(
   project_root_dir: String,
   module_name: String,
-  module_description: String,
   base_package: String,
-  ruoyi_version: String,
+  module_description: Option<String>,
 ) -> Result<String> {
   java_project::module::new_module(
     project_root_dir.as_ref(),
     module_name.as_str(),
-    module_description.as_str(),
+    module_description,
     base_package.as_str(),
-    ruoyi_version.as_str(),
   )
   .map_err(into_napi)
 }
