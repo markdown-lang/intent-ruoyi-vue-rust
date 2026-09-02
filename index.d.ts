@@ -229,7 +229,7 @@ export interface MenuItem {
   visible: boolean
 }
 
-export declare function newMavenModule(projectRootDir: string, moduleName: string, basePackage: string, moduleDescription?: string | undefined | null): string
+export declare function newMavenModule(projectRootDir: string, moduleName: string, basePackage: string, moduleDescription?: string | undefined | null): CodeGenerateResult
 
 /** 通用数值/字符串联合类型，对应 TS 的 `number | string` */
 export type NumberOrString =
@@ -248,7 +248,7 @@ export interface QueryParam {
 
 export declare function sum(a: number, b: number): number
 
-export declare function supportLiquibase(projectRootDir: string, moduleName: string, basePackage: string, author: string): string
+export declare function supportLiquibase(projectRootDir: string, moduleName: string, basePackage: string, author: string): CodeGenerateResult
 
 export interface TableParamActionSlot {
   actions: Array<UIParamActionKey>
