@@ -1,6 +1,6 @@
 {
   "name": "@intent-codes/intent-ruoyi-vue-rust",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "使用 rust 生成代码",
   "main": "index.js",
   "repository": {

@@ -1,3 +1,4 @@
+use crate::types::{CodeGenerateResult, FileInfo, FileOperation};
 use anyhow::Result;
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::{Reader, Writer};
@@ -10,7 +11,7 @@ pub fn new_module(
   module_name: &str,
   module_description: Option<String>,
   base_package: &str,
-) -> Result<String> {
+) -> Result<CodeGenerateResult> {
   let module_path = project_root_dir.join(module_name);
 
   let main_java_base_package_path = module_path
@@ -24,19 +25,46 @@ pub fn new_module(
     fs::create_dir_all(dir)?;
   }
 
+  let mut files: Vec<FileInfo> = Vec::new();
+
   let description = module_description.unwrap_or("".to_string());
   let description = description.as_str();
 
   let root_pom_gav = read_root_pom_gav(project_root_dir);
+
   if let Some(root_pom_gav) = root_pom_gav {
-    new_module_pom_xml(module_name, description, root_pom_gav, &module_path)?;
+    let module_pom_xml_path =
+      new_module_pom_xml(module_name, description, root_pom_gav, &module_path)?;
+    files.push(FileInfo {
+      path: module_pom_xml_path.into_string().unwrap(),
+      operation: FileOperation::Add,
+      message: "新增成功".to_string(),
+    });
   }
 
-  update_root_pom_xml(project_root_dir, module_name, description)?;
-  update_ruoyi_admin_pom_xml(project_root_dir, module_name, description)?;
-  new_biz_entity_java(&module_path, base_package)?;
+  let root_pom_xml_path = update_root_pom_xml(project_root_dir, module_name, description)?;
+  files.push(FileInfo {
+    path: root_pom_xml_path.into_string().unwrap(),
+    operation: FileOperation::Modify,
+    message: "修改成功".to_string(),
+  });
 
-  Ok("".to_string())
+  let ruoyi_admin_pom_xml_path =
+    update_ruoyi_admin_pom_xml(project_root_dir, module_name, description)?;
+  files.push(FileInfo {
+    path: ruoyi_admin_pom_xml_path.into_string().unwrap(),
+    operation: FileOperation::Modify,
+    message: "修改成功".to_string(),
+  });
+
+  let biz_entity_java_path = new_biz_entity_java(&module_path, base_package)?;
+  files.push(FileInfo {
+    path: biz_entity_java_path.into_string().unwrap(),
+    operation: FileOperation::Add,
+    message: "新增成功".to_string(),
+  });
+
+  Ok(CodeGenerateResult { files })
 }
 
 /// pom 构件坐标
@@ -120,7 +148,8 @@ fn new_module_pom_xml(
   module_description: &str,
   root_pom_gav: ArtifactCoordinates,
   module_path: &Path,
-) -> Result<()> {
+) -> Result<PathBuf> {
+  let module_pom_xml_path = module_path.join("pom.xml");
   let parent_artifact_id = root_pom_gav.artifact_id;
   let parent_group_id = root_pom_gav.group_id;
   let parent_version = root_pom_gav.version;
@@ -156,11 +185,11 @@ fn new_module_pom_xml(
 </project>
 "#
   );
-  fs::write(module_path.join("pom.xml"), pom_content)?;
-  Ok(())
+  fs::write(&module_pom_xml_path, pom_content)?;
+  Ok(module_pom_xml_path)
 }
 
-fn new_biz_entity_java(module_path: &Path, base_package: &str) -> Result<String> {
+fn new_biz_entity_java(module_path: &Path, base_package: &str) -> Result<PathBuf> {
   let class_content = format!(
     r#"package {base_package}.core.domain;
 
@@ -226,16 +255,18 @@ public class BizEntity extends BaseEntity {{
     .join(base_package.replace(".", "/"))
     .join("core/domain");
   fs::create_dir_all(&class_dir_path)?;
-  fs::write(class_dir_path.join("BizEntity.java"), class_content)?;
 
-  Ok("".to_string())
+  let full_path = class_dir_path.join("BizEntity.java");
+  fs::write(&full_path, class_content)?;
+
+  Ok(full_path)
 }
 
 fn update_root_pom_xml(
   project_root_dir: &Path,
   module_name: &str,
   module_description: &str,
-) -> Result<()> {
+) -> Result<PathBuf> {
   // 往根目录的 pom.xml 中添加依赖节点
   let root_pom_path = project_root_dir.join("pom.xml");
   let mut root_pom_reader = Reader::from_file(&root_pom_path)?;
@@ -295,14 +326,14 @@ fn update_root_pom_xml(
 
   let result = root_pom_writer.into_inner().into_inner();
   fs::write(&root_pom_path, result)?;
-  Ok(())
+  Ok(root_pom_path)
 }
 
 fn update_ruoyi_admin_pom_xml(
   project_root_dir: &Path,
   module_name: &str,
   module_description: &str,
-) -> Result<()> {
+) -> Result<PathBuf> {
   // 往 ruoyi_admin 的 pom.xml 中添加依赖节点
   let pom_path = project_root_dir.join("ruoyi_admin/pom.xml");
   let mut pom_reader = Reader::from_file(&pom_path)?;
@@ -348,7 +379,7 @@ fn update_ruoyi_admin_pom_xml(
 
   let result = pom_writer.into_inner().into_inner();
   fs::write(&pom_path, result)?;
-  Ok(())
+  Ok(pom_path)
 }
 
 #[cfg(test)]

@@ -1,3 +1,4 @@
+use crate::types::{CodeGenerateResult, FileInfo, FileOperation};
 use anyhow::Result;
 use chrono::Local;
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
@@ -5,7 +6,7 @@ use quick_xml::{Reader, Writer};
 use std::fmt::format;
 use std::fs;
 use std::io::Cursor;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// 让项目支持 liquibase
 ///
@@ -19,23 +20,56 @@ pub fn support_liquibase(
   module_name: &str,
   base_package: &str,
   author: &str,
-) -> Result<String> {
-  update_root_pom_xml(project_root_dir)?;
-  update_module_pom_xml(project_root_dir, module_name)?;
-  new_liquibase_config_java(project_root_dir, module_name, base_package)?;
+) -> Result<CodeGenerateResult> {
+  let mut files: Vec<FileInfo> = Vec::new();
+
+  let root_pom_xml_path = update_root_pom_xml(project_root_dir)?;
+  files.push(FileInfo {
+    path: root_pom_xml_path.into_string().unwrap(),
+    operation: FileOperation::Modify,
+    message: "修改成功".to_string(),
+  });
+
+  let module_pom_xml_path = update_module_pom_xml(project_root_dir, module_name)?;
+  files.push(FileInfo {
+    path: module_pom_xml_path.into_string().unwrap(),
+    operation: FileOperation::Modify,
+    message: "修改成功".to_string(),
+  });
+
+  let liquibase_config_java_path =
+    new_liquibase_config_java(project_root_dir, module_name, base_package)?;
+  files.push(FileInfo {
+    path: liquibase_config_java_path.into_string().unwrap(),
+    operation: FileOperation::Add,
+    message: "新增成功".to_string(),
+  });
 
   let demo_table_id = Local::now().format("%Y%m%d%H%M").to_string();
-  new_liquibase_config_xml(project_root_dir, module_name, demo_table_id.as_str())?;
-  new_liquibase_demo_table_create_xml(
+  let liquibase_config_xml_path =
+    new_liquibase_config_xml(project_root_dir, module_name, demo_table_id.as_str())?;
+  files.push(FileInfo {
+    path: liquibase_config_xml_path.into_string().unwrap(),
+    operation: FileOperation::Add,
+    message: "新增成功".to_string(),
+  });
+
+  let demo_table_create_xml_path = new_liquibase_demo_table_create_xml(
     project_root_dir,
     module_name,
     author,
     demo_table_id.as_str(),
   )?;
-  Ok("".to_string())
+  files.push(FileInfo {
+    path: demo_table_create_xml_path.into_string().unwrap(),
+    operation: FileOperation::Add,
+    message: "新增成功".to_string(),
+  });
+
+  Ok(CodeGenerateResult { files })
 }
 
-fn update_root_pom_xml(project_root_dir: &Path) -> Result<()> {
+fn update_root_pom_xml(project_root_dir: &Path) -> Result<PathBuf> {
   let liquibase_core_version = "5.0.4";
 
   // 往根目录的 pom.xml 中添加依赖节点
@@ -97,10 +131,11 @@ fn update_root_pom_xml(project_root_dir: &Path) -> Result<()> {
 
   let result = root_pom_writer.into_inner().into_inner();
   fs::write(&root_pom_path, result)?;
-  Ok(())
+
+  Ok(root_pom_path)
 }
 
-fn update_module_pom_xml(project_root_dir: &Path, module_name: &str) -> Result<()> {
+fn update_module_pom_xml(project_root_dir: &Path, module_name: &str) -> Result<PathBuf> {
   let pom_path = project_root_dir.join(module_name).join("pom.xml");
   let mut pom_reader = Reader::from_file(&pom_path)?;
   pom_reader.config_mut().trim_text(false);
@@ -143,14 +178,15 @@ fn update_module_pom_xml(project_root_dir: &Path, module_name: &str) -> Result<(
 
   let result = pom_writer.into_inner().into_inner();
   fs::write(&pom_path, result)?;
-  Ok(())
+
+  Ok(pom_path)
 }
 
 fn new_liquibase_config_java(
   project_root_dir: &Path,
   module_name: &str,
   base_package: &str,
-) -> Result<()> {
+) -> Result<PathBuf> {
   let class_content = format!(
     r#"package {base_package}.core.config;
 
@@ -199,8 +235,10 @@ public class LiquibaseConfig {{
     .join("core/config");
   fs::create_dir_all(&class_dir_path)?;
 
-  fs::write(class_dir_path.join("LiquibaseConfig.java"), class_content)?;
-  Ok(())
+  let file_path = class_dir_path.join("LiquibaseConfig.java");
+  fs::write(&file_path, class_content)?;
+
+  Ok(file_path)
 }
 
 // FIXME: 每次生成时，文件名称和id不要变，不然会尝试重复创建已存在的表，然后报错
@@ -208,7 +246,7 @@ fn new_liquibase_config_xml(
   project_root_dir: &Path,
   module_name: &str,
   demo_table_id: &str,
-) -> Result<()> {
+) -> Result<PathBuf> {
   let xml_content = format!(
     r#"<?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
@@ -228,8 +266,11 @@ fn new_liquibase_config_xml(
     .join(module_name)
     .join("src/main/resources/db/changelog");
   fs::create_dir_all(&xml_dir_path)?;
-  fs::write(xml_dir_path.join("db.changelog-master.xml"), xml_content)?;
-  Ok(())
+
+  let file_path = xml_dir_path.join("db.changelog-master.xml");
+  fs::write(&file_path, xml_content)?;
+
+  Ok(file_path)
 }
 
 fn new_liquibase_demo_table_create_xml(
@@ -237,7 +278,7 @@ fn new_liquibase_demo_table_create_xml(
   module_name: &str,
   author: &str,
   demo_table_id: &str,
-) -> Result<()> {
+) -> Result<PathBuf> {
   let xml_content = format!(
     r#"<?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
@@ -279,11 +320,11 @@ fn new_liquibase_demo_table_create_xml(
     .join(module_name)
     .join("src/main/resources/db/changelog/table/examples/demo_table");
   fs::create_dir_all(&xml_dir_path)?;
-  fs::write(
-    xml_dir_path.join(format!("{demo_table_id}_create.xml")),
-    xml_content,
-  )?;
-  Ok(())
+
+  let file_path = xml_dir_path.join(format!("{demo_table_id}_create.xml"));
+  fs::write(&file_path, xml_content)?;
+
+  Ok(file_path)
 }
 
 #[cfg(test)]

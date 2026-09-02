@@ -13,7 +13,7 @@ mod types;
 mod ui_types;
 mod vue_script;
 
-use crate::types::into_napi;
+use crate::types::{CodeGenerateResult, into_napi};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::path::Path;
@@ -45,7 +45,7 @@ pub fn new_maven_module(
   module_name: String,
   base_package: String,
   module_description: Option<String>,
-) -> Result<String> {
+) -> Result<CodeGenerateResult> {
   java_project::module::new_module(
     project_root_dir.as_ref(),
     module_name.as_str(),
@@ -61,7 +61,7 @@ pub fn support_liquibase(
   module_name: String,
   base_package: String,
   author: String,
-) -> Result<String> {
+) -> Result<CodeGenerateResult> {
   java_project::liquibase_addon::support_liquibase(
     project_root_dir.as_ref(),
     module_name.as_str(),
