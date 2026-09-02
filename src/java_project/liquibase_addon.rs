@@ -337,7 +337,7 @@ mod tests {
 
   #[test]
   fn test_update_module_pom_xml() {
-    update_module_pom_xml("resources/project1".as_ref(), "ruoyi_admin").unwrap();
+    update_module_pom_xml("resources/project1".as_ref(), "ruoyi-admin").unwrap();
   }
 
   #[test]

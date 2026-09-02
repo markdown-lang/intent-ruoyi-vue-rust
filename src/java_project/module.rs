@@ -125,7 +125,7 @@ fn read_root_pom_gav(project_root_dir: &Path) -> Option<ArtifactCoordinates> {
         _ => {}
       },
       Ok(Event::Eof) => break,
-      Ok(e) => return None,
+      Ok(e) => {}
       Err(e) => return None,
     }
 
@@ -334,8 +334,8 @@ fn update_ruoyi_admin_pom_xml(
   module_name: &str,
   module_description: &str,
 ) -> Result<PathBuf> {
-  // 往 ruoyi_admin 的 pom.xml 中添加依赖节点
-  let pom_path = project_root_dir.join("ruoyi_admin/pom.xml");
+  // 往 ruoyi-admin 的 pom.xml 中添加依赖节点
+  let pom_path = project_root_dir.join("ruoyi-admin/pom.xml");
   let mut pom_reader = Reader::from_file(&pom_path)?;
   pom_reader.config_mut().trim_text(false);
   let indent_char = b' ';
@@ -385,6 +385,17 @@ fn update_ruoyi_admin_pom_xml(
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn test_new_module() {
+    new_module(
+      "D:\\sources\\markdown-lang\\ide-plugins\\vscode\\server".as_ref(),
+      "ruoyi-test",
+      Some("测试模块".to_string()),
+      "com.ruoyi.test",
+    )
+    .unwrap();
+  }
 
   #[test]
   fn test_update_root_pom_xml() {
