@@ -182,6 +182,8 @@ export interface FormTextInput {
 
 export declare function generateVueScript(uiPage: UiPage): string
 
+export declare function installLiquibaseAddon(projectRootDir: string, moduleName: string, basePackage: string, author: string): CodeGenerateResult
+
 /** 判断当前目录是不是多模块的 maven 项目 */
 export declare function isMavenMultipleModuleProject(projectRootPath: string): boolean
 
@@ -247,8 +249,6 @@ export interface QueryParam {
 }
 
 export declare function sum(a: number, b: number): number
-
-export declare function supportLiquibase(projectRootDir: string, moduleName: string, basePackage: string, author: string): CodeGenerateResult
 
 export interface TableParamActionSlot {
   actions: Array<UIParamActionKey>
