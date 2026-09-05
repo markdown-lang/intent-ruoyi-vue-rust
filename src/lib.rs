@@ -56,13 +56,13 @@ pub fn new_maven_module(
 }
 
 #[napi]
-pub fn support_liquibase(
+pub fn install_liquibase_addon(
   project_root_dir: String,
   module_name: String,
   base_package: String,
   author: String,
 ) -> Result<CodeGenerateResult> {
-  java_project::liquibase_addon::support_liquibase(
+  java_project::liquibase_addon::install(
     project_root_dir.as_ref(),
     module_name.as_str(),
     base_package.as_str(),

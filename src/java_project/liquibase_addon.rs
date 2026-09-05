@@ -15,7 +15,7 @@ use std::path::{Path, PathBuf};
 /// 3. 在 src/main/java/com/ruoyi/xx/core/config 下添加 LiquibaseConfig.java
 /// 4. 在 src/main/resources/db/changelog 下 创建 db.changelog-master.xml 和 table 文件夹
 /// 5. 创建一张示例表
-pub fn support_liquibase(
+pub fn install(
   project_root_dir: &Path,
   module_name: &str,
   base_package: &str,
@@ -330,6 +330,7 @@ fn new_liquibase_demo_table_create_xml(
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::java_project::module::new_module;
   #[test]
   fn test_update_root_pom_xml() {
     update_root_pom_xml("resources/project1".as_ref()).unwrap();
@@ -357,6 +358,17 @@ mod tests {
       "server",
       "zhangsan",
       "202608301700",
+    )
+    .unwrap();
+  }
+
+  #[test]
+  fn test_install() {
+    install(
+      "D:\\sources\\markdown-lang\\ide-plugins\\vscode\\server".as_ref(),
+      "ruoyi-test",
+      "com.ruoyi.test",
+      "cx",
     )
     .unwrap();
   }
